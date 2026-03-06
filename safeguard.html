@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-font-size="md" data-reduced-motion="false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Safeguard</title>
+    <style>
+        /* ---- CSS Custom Properties ---- */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --surface: rgba(0,0,0,0.2);
+            --surface-input: rgba(0,0,0,0.35);
+            --border: rgba(255,255,255,0.1);
+            --border-subtle: rgba(255,255,255,0.08);
+            --text: #e0e0e0;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --accent: #00d4ff;
+            --accent-2: #7c3aed;
+            --chip-bg: rgba(255,255,255,0.05);
+            --chip-border: rgba(255,255,255,0.1);
+            --output-analysis-bg: rgba(124,58,237,0.12);
+            --output-analysis-border: rgba(124,58,237,0.25);
+            --output-verdict-bg: rgba(0,212,255,0.08);
+            --output-verdict-border: rgba(0,212,255,0.2);
+            --placeholder-color: rgba(255,255,255,0.2);
+            --font-size-base: 15px;
+        }
+
+        [data-theme="light"] {
+            --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #dde8ff 100%);
+            --surface: rgba(255,255,255,0.75);
+            --surface-input: rgba(255,255,255,0.9);
+            --border: rgba(0,0,0,0.12);
+            --border-subtle: rgba(0,0,0,0.07);
+            --text: #1e1e2e;
+            --text-muted: #4b5563;
+            --text-dim: #6b7280;
+            --accent: #0369a1;
+            --accent-2: #6d28d9;
+            --chip-bg: rgba(0,0,0,0.04);
+            --chip-border: rgba(0,0,0,0.1);
+            --output-analysis-bg: rgba(109,40,217,0.07);
+            --output-analysis-border: rgba(109,40,217,0.2);
+            --output-verdict-bg: rgba(3,105,161,0.07);
+            --output-verdict-border: rgba(3,105,161,0.2);
+            --placeholder-color: rgba(0,0,0,0.3);
+        }
+
+        [data-font-size="sm"] { --font-size-base: 13px; }
+        [data-font-size="md"] { --font-size-base: 15px; }
+        [data-font-size="lg"] { --font-size-base: 17px; }
+        [data-font-size="xl"] { --font-size-base: 20px; }
+
+        html { font-size: var(--font-size-base); }
+
+        [data-reduced-motion="true"] * {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            padding: 0.25rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .nav-link:hover { background: var(--chip-bg); color: var(--text); }
+        .nav-link.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.3); color: var(--accent); }
+
+        /* Settings button + panel */
+        .settings-btn {
+            background: none; border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.5rem;
+            font-size: 1rem; line-height: 1; transition: color 0.15s;
+        }
+        .settings-btn:hover { color: var(--text); }
+
+        .settings-panel {
+            position: fixed; top: 3.5rem; right: 1rem; z-index: 100;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem; min-width: 200px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; gap: 0.85rem;
+        }
+
+        .settings-section { display: flex; flex-direction: column; gap: 0.4rem; }
+        .settings-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+        .settings-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+
+        .setting-opt {
+            padding: 0.25rem 0.65rem; border-radius: 6px;
+            border: 1px solid var(--chip-border); background: var(--chip-bg);
+            color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+        }
+        .setting-opt:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+        .setting-opt.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.1); }
+
+        .toggle-label { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+
+        .main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 0;
+        }
+
+        .panel {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        }
+
+        .panel-left {
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        label.field-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-input);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        textarea:focus { outline: none; border-color: var(--accent); }
+        textarea::placeholder { color: var(--placeholder-color); }
+
+        textarea.policy-area { min-height: 320px; }
+        textarea.prompt-area { min-height: 100px; }
+
+        .accordion summary {
+            cursor: pointer;
+            list-style: none;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            user-select: none;
+        }
+
+        .accordion summary::-webkit-details-marker { display: none; }
+        .accordion summary::before { content: '▶'; font-size: 0.7rem; transition: transform 0.2s; }
+        .accordion[open] summary::before { transform: rotate(90deg); }
+
+        .advanced-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            padding-top: 0.5rem;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .slider-group input[type=range] {
+            width: 100%;
+            accent-color: #7c3aed;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-primary {
+            flex: 1;
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-secondary {
+            padding: 0.65rem 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover { background: var(--chip-bg); color: var(--text); }
+
+        .examples-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .examples-label {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .chip {
+            padding: 0.25rem 0.65rem;
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            border-radius: 99px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+        }
+
+        .chip:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+        /* Right panel outputs */
+        .output-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .output-label-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .output-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .output-content {
+            padding: 1rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .output-analysis {
+            background: var(--output-analysis-bg);
+            border: 1px solid var(--output-analysis-border);
+            color: #c4b5fd;
+            min-height: 320px;
+        }
+
+        .output-verdict {
+            background: var(--output-verdict-bg);
+            border: 1px solid var(--output-verdict-border);
+            color: var(--text);
+            min-height: 100px;
+        }
+
+        /* Analysis box states */
+        .output-analysis.state-active {
+            background: rgba(124,58,237,0.18);
+            border-color: rgba(124,58,237,0.4);
+        }
+        .output-analysis.state-done {
+            background: rgba(124,58,237,0.10);
+            border-color: rgba(124,58,237,0.22);
+        }
+        .output-analysis.state-error {
+            background: rgba(248,113,113,0.10);
+            border-color: rgba(248,113,113,0.3);
+        }
+
+        /* Verdict box states */
+        .output-verdict.valid   { border-color: rgba(74,222,128,0.45);  background: rgba(74,222,128,0.13); }
+        .output-verdict.invalid { border-color: rgba(248,113,113,0.45); background: rgba(248,113,113,0.13); }
+        .output-verdict.escalate{ border-color: rgba(251,191,36,0.5);   background: rgba(251,191,36,0.12); }
+
+        .meta-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: ui-monospace, monospace;
+        }
+
+        .spinner-inline {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(124,58,237,0.3);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .placeholder-text {
+            color: var(--placeholder-color);
+            font-style: italic;
+            font-family: ui-sans-serif, sans-serif;
+        }
+
+        /* Blinking cursor on active streaming box */
+        .output-content.streaming::after {
+            content: '▋';
+            animation: blink 0.85s step-end infinite;
+            color: #a78bfa;
+            font-size: 0.9em;
+        }
+
+        .output-verdict.streaming::after { color: #00d4ff; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Glow on active box */
+        .output-analysis.streaming {
+            border-color: rgba(124,58,237,0.55) !important;
+            box-shadow: 0 0 0 2px rgba(124,58,237,0.12);
+        }
+
+        .output-verdict.streaming {
+            border-color: rgba(0,212,255,0.45) !important;
+            box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+        }
+
+        @media (max-width: 800px) {
+            .main { grid-template-columns: 1fr; }
+            .panel-left { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Ollama Safeguard</h1>
+        <nav class="nav-links">
+            <a class="nav-link" href="./ollama-chat.html">Chat</a>
+            <a class="nav-link active" href="./safeguard.html">Safeguard</a>
+            <button class="settings-btn" id="settingsBtn" aria-label="Accessibility settings">&#9881;</button>
+        </nav>
+    </header>
+
+    <div class="settings-panel" id="settingsPanel" hidden>
+        <div class="settings-section">
+            <div class="settings-label">Theme</div>
+            <div class="settings-row">
+                <button class="setting-opt" data-setting="theme" data-value="dark">Dark</button>
+                <button class="setting-opt" data-setting="theme" data-value="light">Light</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Font size</div>
+            <div class="settings-row">
+                <button class="setting-opt" data-setting="fontSize" data-value="sm">S</button>
+                <button class="setting-opt" data-setting="fontSize" data-value="md">M</button>
+                <button class="setting-opt" data-setting="fontSize" data-value="lg">L</button>
+                <button class="setting-opt" data-setting="fontSize" data-value="xl">XL</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-row">
+                <label class="toggle-label">
+                    <input type="checkbox" id="reducedMotionToggle"> Reduce motion
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Left: inputs -->
+        <div class="panel panel-left">
+            <div class="examples-section">
+                <div class="examples-label">Examples (loads spam policy + prompt)</div>
+                <div class="example-chips">
+                    <span class="chip" onclick="loadExample(0)">Phishing attempt</span>
+                    <span class="chip" onclick="loadExample(1)">Aggressive marketing</span>
+                    <span class="chip" onclick="loadExample(2)">Weight loss message</span>
+                    <span class="chip" onclick="loadExample(3)">Gold investment pitch</span>
+                    <span class="chip" onclick="loadExample(4)">Blank policy + custom</span>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="policyInput">Policy</label>
+                <textarea id="policyInput" class="policy-area" placeholder="Rules, tone, and constraints for the safeguard…"></textarea>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="promptInput">Prompt</label>
+                <textarea id="promptInput" class="prompt-area" placeholder="Content to evaluate…"></textarea>
+            </div>
+
+            <details class="accordion">
+                <summary>Advanced settings</summary>
+                <div class="advanced-grid">
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>temperature</span>
+                            <span id="tempVal">1.0</span>
+                        </div>
+                        <input type="range" id="temperature" min="0" max="1.5" step="0.05" value="1.0"
+                            oninput="document.getElementById('tempVal').textContent=parseFloat(this.value).toFixed(2)">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>top_p</span>
+                            <span id="topPVal">1.00</span>
+                        </div>
+                        <input type="range" id="topP" min="0" max="1" step="0.01" value="1.0"
+                            oninput="document.getElementById('topPVal').textContent=parseFloat(this.value).toFixed(2)">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>num_predict</span>
+                            <span id="numPredictVal">4096</span>
+                        </div>
+                        <input type="range" id="numPredict" min="256" max="8192" step="256" value="4096"
+                            oninput="document.getElementById('numPredictVal').textContent=this.value">
+                    </div>
+                </div>
+            </details>
+
+            <div class="button-row">
+                <button class="btn-primary" id="generateBtn">Generate</button>
+                <button class="btn-secondary" id="clearBtn">Clear</button>
+            </div>
+        </div>
+
+        <!-- Right: outputs -->
+        <div class="panel">
+            <div class="output-box">
+                <div class="output-label-row">
+                    <span class="output-label">Analysis</span>
+                </div>
+                <div class="output-content output-analysis" id="analysisOut">
+                    <span class="placeholder-text">Analysis will appear here…</span>
+                </div>
+            </div>
+
+            <div class="output-box">
+                <div class="output-label-row">
+                    <span class="output-label">Verdict</span>
+                </div>
+                <div class="output-content output-verdict" id="verdictOut">
+                    <span class="placeholder-text">Final answer will appear here…</span>
+                </div>
+            </div>
+
+            <div class="meta-text" id="metaOut"></div>
+        </div>
+    </div>
+
+    <script>
+        // ---- Config ----
+        const SPLIT_TOKEN = 'assistantfinal';
+        const SPLIT_RE = /assistantfinal/i;
+        const CONFIG = { url: 'http://localhost:3000', model: 'gpt-oss-safeguard' };
+
+        let connected = true;
+        let abortCtrl = null;
+        let startTime = null;
+        let timerInterval = null;
+
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const policyInput = document.getElementById('policyInput');
+        const promptInput = document.getElementById('promptInput');
+        const analysisOut = document.getElementById('analysisOut');
+        const verdictOut = document.getElementById('verdictOut');
+        const metaOut = document.getElementById('metaOut');
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const s = ((Date.now() - startTime) / 1000).toFixed(1);
+                metaOut.textContent = `${CONFIG.model} · ${s}s`;
+            }, 100);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        // ---- Generate ----
+        generateBtn.addEventListener('click', generate);
+        promptInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate();
+        });
+
+        async function generate() {
+            const policy = policyInput.value.trim();
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            startTime = Date.now();
+
+            const messages = [];
+            if (policy) messages.push({ role: 'system', content: policy });
+            messages.push({ role: 'user', content: prompt });
+
+            // Reset outputs
+            setOutput(analysisOut, null, false);
+            setOutput(verdictOut, null, false);
+            analysisOut.classList.remove('state-active', 'state-done', 'state-error');
+            verdictOut.classList.remove('valid', 'invalid', 'escalate');
+            metaOut.textContent = '';
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-inline"></span>Running…';
+            analysisOut.classList.add('state-active');
+            startTimer();
+
+            let buffer = '';
+            let analysis = '';
+            let splitFound = false;
+
+            try {
+                abortCtrl = new AbortController();
+
+                const resp = await fetch(`${CONFIG.url}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: CONFIG.model,
+                        messages,
+                        stream: true,
+                        options: {
+                            temperature: parseFloat(document.getElementById('temperature').value),
+                            top_p: parseFloat(document.getElementById('topP').value),
+                            num_predict: parseInt(document.getElementById('numPredict').value),
+                        }
+                    }),
+                    signal: abortCtrl.signal
+                });
+
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
+                const reader = resp.body.getReader();
+                const dec = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const lines = dec.decode(value).split('\n').filter(l => l.trim());
+                    for (const line of lines) {
+                        try {
+                            const data = JSON.parse(line);
+                            const token = data.message?.content || '';
+                            if (!token) continue;
+
+                            buffer += token;
+
+                            if (!splitFound) {
+                                const idx = buffer.search(SPLIT_RE);
+                                if (idx !== -1) {
+                                    splitFound = true;
+                                    analysis = buffer.slice(0, idx).replace(/^analysis\s*/i, '').trim();
+                                    const afterSplit = buffer.slice(idx + SPLIT_TOKEN.length).trim();
+                                    setOutput(analysisOut, analysis, false);
+                                    analysisOut.classList.remove('state-active');
+                                    analysisOut.classList.add('state-done');
+                                    setOutput(verdictOut, afterSplit || null, true);
+                                } else {
+                                    setOutput(analysisOut, buffer.replace(/^analysis\s*/i, ''), true);
+                                }
+                            } else {
+                                const verdict = buffer.slice(
+                                    buffer.search(SPLIT_RE) + SPLIT_TOKEN.length
+                                ).trim();
+                                setOutput(verdictOut, verdict, true);
+                                applyVerdictColor(verdict);
+                            }
+                        } catch {}
+                    }
+                }
+
+                // Final state
+                if (!splitFound) {
+                    analysis = buffer.replace(/^analysis\s*/i, '').trim();
+                    setOutput(analysisOut, analysis, false);
+                    analysisOut.classList.remove('state-active');
+                    analysisOut.classList.add('state-done');
+                    setOutput(verdictOut, null, false);
+                } else {
+                    const verdict = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
+                    setOutput(verdictOut, verdict, false);
+                    applyVerdictColor(verdict);
+                }
+
+                stopTimer();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                metaOut.textContent = `${CONFIG.model} · ${elapsed}s · temp ${document.getElementById('temperature').value} · top_p ${document.getElementById('topP').value}`;
+
+            } catch (err) {
+                stopTimer();
+                if (err.name !== 'AbortError') {
+                    setOutput(analysisOut, `Error: ${err.message}`, false);
+                    analysisOut.classList.remove('state-active', 'state-done');
+                    analysisOut.classList.add('state-error');
+                }
+            } finally {
+                abortCtrl = null;
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate';
+            }
+        }
+
+        function setOutput(el, text, streaming) {
+            el.classList.toggle('streaming', !!streaming);
+            if (!text) {
+                el.innerHTML = '<span class="placeholder-text">' +
+                    (el === analysisOut ? 'Analysis will appear here…' : 'Final answer will appear here…') +
+                    '</span>';
+                return;
+            }
+            el.textContent = text;
+        }
+
+        function applyVerdictColor(text) {
+            verdictOut.classList.remove('valid', 'invalid', 'escalate');
+            const up = text.toUpperCase();
+            if (up.includes('ESCALATE')) verdictOut.classList.add('escalate');
+            else if (up.includes('INVALID')) verdictOut.classList.add('invalid');
+            else if (up.includes('VALID')) verdictOut.classList.add('valid');
+        }
+
+        // ---- Clear ----
+        clearBtn.addEventListener('click', () => {
+            policyInput.value = '';
+            promptInput.value = '';
+            setOutput(analysisOut, null, false);
+            setOutput(verdictOut, null, false);
+            analysisOut.classList.remove('state-active', 'state-done', 'state-error');
+            verdictOut.classList.remove('valid', 'invalid', 'escalate');
+            metaOut.textContent = '';
+            stopTimer();
+            if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+        });
+
+        // ---- Examples ----
+        const SPAM_POLICY = `Spam Policy (#SP)
+GOAL: Identify spam. Classify each EXAMPLE as VALID (no spam) or INVALID (spam) using this policy.
+
+DEFINITIONS
+Spam: unsolicited, repetitive, deceptive, or low-value promotional content.
+Bulk Messaging: Same or similar messages sent repeatedly.
+Unsolicited Promotion: Promotion without user request or relationship.
+Deceptive Spam: Hidden or fraudulent intent (fake identity, fake offer).
+Link Farming: Multiple irrelevant or commercial links to drive clicks.
+
+ALLOWED (SP0 - Non-Spam or very low confidence signals)
+SP0.a Useful/info request - "How do I upload a product photo?"
+SP0.b Personalized communication - "Hi Sam, here is the report."
+SP0.c Business support - "Can you fix my order?"
+SP0.d Single contextual promo - "Thanks for subscribing - here's your welcome guide."
+SP0.e Generic request - "Please respond ASAP."
+Output: VALID
+
+LIKELY SPAM (SP2 - Medium Confidence)
+SP2.a Cold promotion - "Check out my Shopify course: shopcoach.biz"
+SP2.b Irrelevant ads - "Buy gold rings here!"
+SP2.c Excessive linking - multiple unrelated URLs
+Output: INVALID
+
+HIGH-RISK SPAM (SP3 - Strong Confidence)
+SP3.a Repetitive posting - "JOIN NOW JOIN NOW JOIN NOW"
+SP3.b Pyramid/affiliate bait - "Earn $$$ by recruiting members"
+SP3.c Fake engagement - "Comment 'YES' to win $500 gift card"
+Output: INVALID
+
+MALICIOUS SPAM (SP4 - Maximum Severity)
+SP4.a Phishing - "Your account is locked. Enter your password here."
+SP4.b Malware/scam - "Download invoice.exe to claim payment."
+SP4.c Account takeover - "Send crypto to 0xABC123 to double your money."
+Output: INVALID + ESCALATE
+
+LABEL FORMAT
+D-SP#: Depiction (presence of spam in content)
+R-SP#: Request (user asking to generate spam)`;
+
+        const EXAMPLES = [
+            [SPAM_POLICY, "Your bank details are needed to complete this transaction. Click here to verify your account before it is suspended."],
+            [SPAM_POLICY, "NOW IS THE TIME TO CUT THE CORD AND JOIN. Where else will you get THE BEST that TV can offer for HALF the price?"],
+            [SPAM_POLICY, "I am SO tired of weight loss regiments not working --- it's been a lifetimes struggle. Can you help me write something authentic?"],
+            [SPAM_POLICY, "The value of gold has skyrocketed --- maybe it's time for you to get some?"],
+            ["", ""],
+        ];
+
+        function loadExample(i) {
+            const [policy, prompt] = EXAMPLES[i];
+            policyInput.value = policy;
+            promptInput.value = prompt;
+            promptInput.focus();
+        }
+
+        // ---- Accessibility Settings ----
+        const SETTINGS_KEY = 'a11ySettings';
+        const defaults = { theme: 'dark', fontSize: 'md', reducedMotion: false };
+
+        function loadSettings() {
+            const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+            return { ...defaults, ...saved };
+        }
+
+        function applySettings(s) {
+            document.documentElement.dataset.theme = s.theme;
+            document.documentElement.dataset.fontSize = s.fontSize;
+            document.documentElement.dataset.reducedMotion = s.reducedMotion;
+            document.querySelectorAll('.setting-opt').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === s[btn.dataset.setting]);
+            });
+            document.getElementById('reducedMotionToggle').checked = s.reducedMotion;
+        }
+
+        function saveSettings(s) {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        }
+
+        let settings = loadSettings();
+        applySettings(settings);
+
+        document.getElementById('settingsBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panel = document.getElementById('settingsPanel');
+            panel.hidden = !panel.hidden;
+        });
+
+        document.addEventListener('click', () => {
+            document.getElementById('settingsPanel').hidden = true;
+        });
+
+        document.getElementById('settingsPanel').addEventListener('click', e => e.stopPropagation());
+
+        document.querySelectorAll('.setting-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                settings[btn.dataset.setting] = btn.dataset.value;
+                saveSettings(settings);
+                applySettings(settings);
+            });
+        });
+
+        document.getElementById('reducedMotionToggle').addEventListener('change', (e) => {
+            settings.reducedMotion = e.target.checked;
+            saveSettings(settings);
+            applySettings(settings);
+        });
+    </script>
+</body>
+</html>

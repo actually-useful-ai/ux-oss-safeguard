@@ -1,0 +1,8 @@
+{
+  "name": "ollama-chat",
+  "version": "1.0.0",
+  "description": "Local chat interface for Ollama with CORS proxy",
+  "scripts": {
+    "start": "node proxy-server.js"
+  }
+}
