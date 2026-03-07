@@ -32,8 +32,6 @@ Every evaluation produces one of three outcomes:
 | **FAIL** | Red | Content violates the policy |
 | **ESCALATE** | Amber | Severe violation — flagged for human review |
 
-![PASS verdict for a legitimate support request](screenshots/safeguard-pass.png)
-
 ![ESCALATE verdict for a phishing attempt](screenshots/safeguard-escalate.png)
 
 The verdict box also decodes the model's technical classification code into plain language. Instead of seeing `D-FD4.a+ESCALATE`, you see:
