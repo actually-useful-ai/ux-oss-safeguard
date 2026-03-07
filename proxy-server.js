@@ -71,6 +71,19 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // Serve screenshot files (for OG images)
+    if (pathname.startsWith('/screenshots/') && pathname.endsWith('.png')) {
+        try {
+            const img = await readFile(path.join(__dirname, pathname));
+            res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+            res.end(img);
+        } catch {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('Not found');
+        }
+        return;
+    }
+
     // Fake /api/tags endpoint — return available models for the frontend model picker
     if (pathname === '/api/tags') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
