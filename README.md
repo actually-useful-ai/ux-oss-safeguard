@@ -13,6 +13,8 @@ Built on OpenAI's [`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-os
 
 ![Safeguard showing a FAIL verdict for aggressive marketing spam](screenshots/safeguard-fail.png)
 
+![Safeguard showing a PASS verdict for a legitimate support request](screenshots/safeguard-pass.png)
+
 ## What it does
 
 You give it two things:
@@ -101,7 +103,7 @@ Browser  →  proxy-server.js (port 3456)  →  HuggingFace Inference API
 The proxy is a single Node.js file with **zero npm dependencies** — just `http`, `https`, `fs`, and `path` from the standard library. It does three things:
 
 1. **Serves the HTML frontends** — the evaluator at `/` and the chat interface at `/chat`
-2. **Translates request formats** — the frontend sends Ollama-format requests, the proxy converts them to OpenAI-compatible chat completions for HuggingFace
+2. **Translates request formats** — the frontend sends requests in OpenAI-compatible format; the proxy forwards them to HuggingFace's chat completions endpoint
 3. **Streams responses** — SSE from HuggingFace gets translated to newline-delimited JSON chunks that the frontend parses incrementally
 
 ### Files
@@ -165,6 +167,16 @@ Try the **Legitimate** tab — a support request should come back **PASS**.
 This runs on [dr.eamer.dev](https://dr.eamer.dev) as part of the IO Suite, registered as the `safeguard` service. Caddy proxies `/io/safeguard/*` to port 3456.
 
 Both HTML files use the [IO Suite shared theme](https://dr.eamer.dev/io/) for consistent light/dark mode toggling across the ecosystem.
+
+## Accessibility
+
+Both interfaces are built with accessibility as a baseline, not an afterthought:
+
+- **Skip link** — keyboard users can jump past the header directly to the main content
+- **Live region** — the verdict output uses `aria-busy` so screen readers announce when evaluation is running
+- **Reduced motion** — animations and transitions are disabled automatically when `prefers-reduced-motion` is set
+- **Full keyboard navigation** — every control is reachable and operable without a mouse
+- **WCAG contrast** — color choices meet AA contrast ratios in both light and dark themes
 
 ## License
 

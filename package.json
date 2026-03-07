@@ -1,7 +1,7 @@
 {
   "name": "safeguard-ux",
   "version": "1.0.0",
-  "description": "Content policy evaluator and chat interface for local Ollama instances",
+  "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b via HuggingFace Inference API. Paste text, get a PASS/FAIL/ESCALATE verdict with streamed reasoning.",
   "scripts": {
     "start": "node proxy-server.js"
   }
