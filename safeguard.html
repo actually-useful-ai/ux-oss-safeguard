@@ -91,8 +91,11 @@
     /* ─── Tabbed examples ─── */
     .sg-tabs { display: flex; flex-direction: column; gap: 6px; }
     .sg-tab-bar {
-      display: flex; gap: 4px; flex-wrap: wrap;
+      display: flex; gap: 6px; flex-wrap: nowrap;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; -ms-overflow-style: none;
     }
+    .sg-tab-bar::-webkit-scrollbar { display: none; }
     .sg-tab-bar[role="tablist"] { margin: 0; padding: 0; }
     .sg-tab {
       padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px;
@@ -136,12 +139,12 @@
       text-transform: none; letter-spacing: 0; margin-left: 4px;
     }
     .sg-policy-wrap textarea {
-      margin-top: 8px; font-size: 0.84rem; min-height: 160px;
+      margin-top: 8px; font-size: 0.76rem; min-height: 160px;
       font-family: var(--font); line-height: 1.55; max-width: 100%;
     }
 
     /* ─── Prompt ─── */
-    .sg-prompt-area textarea { font-size: 0.9rem; min-height: 72px; max-width: 100%; }
+    .sg-prompt-area textarea { font-size: 0.84rem; min-height: 72px; max-width: 100%; }
     /* Prevent iOS zoom on input focus */
     @supports (-webkit-touch-callout: none) {
       textarea, input[type="range"] { font-size: 16px !important; }
@@ -199,7 +202,7 @@
     .sg-verdict-box.streaming::after { content: '\2588'; animation: blink-cursor 0.75s step-end infinite; color: var(--accent); margin-left: 2px; }
     @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-    .sg-verdict-placeholder { color: var(--text-2); font-style: italic; font-family: var(--font); font-size: 0.88rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .sg-verdict-placeholder { color: var(--text-2); font-style: italic; font-family: var(--font); font-size: 0.84rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
 
     .sg-verdict-label {
       font-family: 'DM Mono', var(--mono); font-size: 1.6rem; font-weight: 700;
@@ -247,27 +250,24 @@
 
     @media (max-width: 700px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
-      .sg-bar { padding: 8px 12px; }
-      .sg-tab-bar { gap: 3px; }
+      .sg-bar { padding: 10px 12px; }
       .sg-tab { padding: 3px 10px; font-size: 0.68rem; }
       .sg-chip { padding: 4px 10px; font-size: 0.72rem; }
       .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
       .sg-sliders { grid-template-columns: 1fr; }
       .sg-verdict-box { font-size: 1rem; padding: 14px; }
       .sg-verdict-label { font-size: 1.3rem; }
-      .sg-reasoning-box { font-size: 0.8rem; padding: 12px; max-height: 50vh; overflow-y: auto; }
+      .sg-reasoning-box { font-size: 0.78rem; padding: 12px; max-height: 50vh; overflow-y: auto; }
       .sg-popover { right: -8px; width: calc(100vw - 24px); max-width: 260px; }
       .sg-evaluate { padding: 13px 20px; font-size: 0.92rem; }
-      .sg-policy-wrap textarea { min-height: 120px; }
+      .sg-policy-wrap textarea { min-height: 120px; font-size: 0.72rem; }
       .sg-section-label { font-size: 0.68rem; }
       .sg-meta { font-size: 0.64rem; }
     }
     @media (max-width: 400px) {
       .sg-body { padding: 12px 10px 32px; gap: 12px; }
       .sg-bar { padding: 6px 10px; }
-      .sg-brand { font-size: 0.82rem; }
-      .sg-tab { padding: 2px 8px; font-size: 0.64rem; }
-      .sg-chip { font-size: 0.68rem; }
+      .sg-brand { font-size: 0.92rem; }
       .sg-verdict-label { font-size: 1.1rem; }
       .sg-verdict-detail { font-size: 0.7rem; }
     }
