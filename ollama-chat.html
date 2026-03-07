@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chat · Safeguard · IO Suite</title>
   <meta name="description" content="Chat interface for local Ollama models with live thinking display">
   <link rel="stylesheet" href="/io/shared/css/io-theme.css">
   <script src="/io/shared/js/theme.js"></script>
   <style>
     /* ─── Chat-specific ─── */
-    body { padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { padding: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100vh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    @supports (-webkit-touch-callout: none) {
+      textarea, input { font-size: 16px !important; }
+    }
 
     .sg-header {
       padding: 12px 24px;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Safeguard · IO Suite</title>
   <meta name="description" content="Classify content against custom safety policies">
   <link rel="stylesheet" href="/io/shared/css/io-theme.css">
@@ -14,10 +14,11 @@
     [data-font-size="md"] { --font-size-base: 15px; }
     [data-font-size="lg"] { --font-size-base: 17px; }
     [data-font-size="xl"] { --font-size-base: 20px; }
-    html { font-size: var(--font-size-base, 15px); }
+    html { font-size: var(--font-size-base, 15px); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     [data-reduced-motion="true"] * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 
-    body { padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { padding: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100vh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 
     /* ─── Header ─── */
     .sg-bar {
@@ -136,11 +137,15 @@
     }
     .sg-policy-wrap textarea {
       margin-top: 8px; font-size: 0.84rem; min-height: 160px;
-      font-family: var(--font); line-height: 1.55;
+      font-family: var(--font); line-height: 1.55; max-width: 100%;
     }
 
     /* ─── Prompt ─── */
-    .sg-prompt-area textarea { font-size: 0.9rem; min-height: 72px; }
+    .sg-prompt-area textarea { font-size: 0.9rem; min-height: 72px; max-width: 100%; }
+    /* Prevent iOS zoom on input focus */
+    @supports (-webkit-touch-callout: none) {
+      textarea, input[type="range"] { font-size: 16px !important; }
+    }
     .sg-actions-row { display: flex; gap: 8px; align-items: center; }
     .sg-evaluate {
       flex: 1; padding: 11px 24px; background: var(--accent); color: #fff; border: none;
@@ -241,14 +246,30 @@
     }
 
     @media (max-width: 700px) {
-      .sg-body { padding: 16px 14px 40px; gap: 16px; }
-      .sg-bar { padding: 8px 14px; }
+      .sg-body { padding: 16px 12px 40px; gap: 14px; }
+      .sg-bar { padding: 8px 12px; }
       .sg-tab-bar { gap: 3px; }
       .sg-tab { padding: 3px 10px; font-size: 0.68rem; }
-      .sg-results-row { grid-template-columns: 1fr; }
+      .sg-chip { padding: 4px 10px; font-size: 0.72rem; }
+      .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
       .sg-sliders { grid-template-columns: 1fr; }
       .sg-verdict-box { font-size: 1rem; padding: 14px; }
       .sg-verdict-label { font-size: 1.3rem; }
+      .sg-reasoning-box { font-size: 0.8rem; padding: 12px; max-height: 50vh; overflow-y: auto; }
+      .sg-popover { right: -8px; width: calc(100vw - 24px); max-width: 260px; }
+      .sg-evaluate { padding: 13px 20px; font-size: 0.92rem; }
+      .sg-policy-wrap textarea { min-height: 120px; }
+      .sg-section-label { font-size: 0.68rem; }
+      .sg-meta { font-size: 0.64rem; }
+    }
+    @media (max-width: 400px) {
+      .sg-body { padding: 12px 10px 32px; gap: 12px; }
+      .sg-bar { padding: 6px 10px; }
+      .sg-brand { font-size: 0.82rem; }
+      .sg-tab { padding: 2px 8px; font-size: 0.64rem; }
+      .sg-chip { font-size: 0.68rem; }
+      .sg-verdict-label { font-size: 1.1rem; }
+      .sg-verdict-detail { font-size: 0.7rem; }
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -437,8 +458,8 @@
         if (info) parts.push(info.label);
         const catName = CATEGORY_NAMES[codeMatch[2]];
         if (catName) parts.push(catName);
-        // Include raw code reference
-        const rawMatch = text.match(/[DR]-[A-Z]{2}\d\.\w+/i);
+        // Include raw code reference (with or without sub-code)
+        const rawMatch = text.match(/[DR]-[A-Z]{2}\d(?:\.\w+)?/i);
         if (rawMatch) parts.push(rawMatch[0]);
       } else {
         // Simple verdict without codes
