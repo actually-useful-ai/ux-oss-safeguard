@@ -685,6 +685,7 @@
         const dir = m[1].toUpperCase() === 'D' ? 'Depiction' : 'Request';
         const catCode = m[2].toUpperCase();
         const sev = parseInt(m[3]);
+        if (![0, 2, 3, 4].includes(sev)) return null; // reject invalid severity codes (e.g. D-SP7)
         const subcode = m[4] ? m[4].toUpperCase() : '';
         const key = catCode + m[3];
         const info = DECODE_MAP[key] || {};
@@ -810,7 +811,7 @@
       resultsRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       startTimer();
 
-      let buffer = '', thinkingBuf = '', hasThinking = false, splitFound = false;
+      let buffer = '', thinkingBuf = '', hasThinking = false, splitFound = false, splitAt = -1;
 
       try {
         abortCtrl = new AbortController();
@@ -854,12 +855,13 @@
                   const idx = buffer.search(SPLIT_RE);
                   if (idx !== -1 && !splitFound) {
                     splitFound = true;
+                    splitAt = idx + SPLIT_TOKEN.length; // record verdict start once
                     setOutput(analysisOut, buffer.slice(0, idx).replace(/^analysis\s*/i, '').trim(), false, 'reasoning');
                     setSignal(analysisSignal, 'done', 'Reasoning');
                     setSignal(verdictSignal, 'active', 'Verdict');
-                    setOutput(verdictOut, buffer.slice(idx + SPLIT_TOKEN.length).trim() || null, true, 'verdict');
+                    setOutput(verdictOut, buffer.slice(splitAt).trim() || null, true, 'verdict');
                   } else if (splitFound) {
-                    const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
+                    const v = buffer.slice(splitAt).trim(); // use stored offset, no re-search
                     setOutput(verdictOut, v, true, 'verdict');
                     applySeverityClass(parseSeverityCode(v));
                   } else {
@@ -867,7 +869,7 @@
                   }
                 }
               }
-            } catch {}
+            } catch (e) { console.warn('Safeguard: malformed stream chunk', e); }
           }
         }
 
@@ -882,7 +884,7 @@
             renderCatViz(parsed);
           }
         } else if (splitFound) {
-          const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
+          const v = buffer.slice(splitAt).trim();
           const parsed = parseSeverityCode(v);
           setOutput(verdictOut, v, false, 'verdict');
           setSignal(verdictSignal, 'done', 'Verdict');
@@ -989,7 +991,7 @@
       for (let i = lines.length - 1; i >= Math.max(0, lines.length - 5); i--) {
         const up = lines[i].toUpperCase();
         if (up.match(/[DR]-(SP|VH|HS|SH|SC|FD|WD|HR|MU)\d/) || up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) {
-          return lines.slice(i).join('\n');
+          return lines[i]; // return only the matched verdict line, not trailing garbage
         }
       }
       return null;
@@ -1004,7 +1006,6 @@
       catViz.classList.remove('visible'); catViz.innerHTML = '';
       setSignal(analysisSignal, '', 'Reasoning'); setSignal(verdictSignal, '', 'Verdict');
       metaOut.textContent = ''; stopTimer();
-      if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
     });
 
     // ── Content Safety Policy ──
