@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/io/shared/css/io-theme.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="/io/shared/js/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     [data-font-size="sm"] { --font-size-base: 13px; }
     [data-font-size="md"] { --font-size-base: 15px; }
@@ -101,14 +102,15 @@
     .sg-tabs { display: flex; flex-direction: column; gap: 6px; }
     .sg-examples-row { display: flex; align-items: center; gap: 10px; }
     .sg-cat-select {
-      padding: 4px 26px 4px 10px;
+      padding: 4px 22px 4px 9px;
       border: 1px solid var(--border); border-radius: var(--radius-sm);
       background: var(--bg-2); color: var(--text-1);
-      font-size: 0.78rem; font-weight: 500; font-family: var(--font);
+      font-size: 0.72rem; font-weight: 500; font-family: var(--font);
       cursor: pointer; transition: all var(--ease);
       appearance: none; -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 8px center;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5' viewBox='0 0 9 5'%3E%3Cpath d='M1 1l3.5 3 3.5-3' stroke='%23888' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 6px center;
+      width: auto; flex-shrink: 0;
     }
     .sg-cat-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
     .sg-cat-select:hover { border-color: var(--border-hover); color: var(--text-0); }
@@ -142,9 +144,39 @@
       font-size: 0.72rem; font-weight: 400; color: var(--text-2);
       text-transform: none; letter-spacing: 0; margin-left: 4px;
     }
+    .sg-policy-wrap .sg-policy-actions {
+      margin-left: auto; display: flex; gap: 4px; text-transform: none; letter-spacing: 0;
+    }
+    .sg-policy-toggle {
+      background: none; border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text-2); font-size: 0.64rem; font-weight: 600; font-family: var(--font);
+      padding: 1px 7px; cursor: pointer; transition: all var(--ease); letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .sg-policy-toggle:hover { color: var(--text-0); border-color: var(--border-hover); }
+    .sg-policy-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
     .sg-policy-wrap textarea {
-      margin-top: 8px; font-size: 0.76rem; min-height: 160px;
+      margin-top: 8px; font-size: 0.76rem; min-height: 300px;
       font-family: var(--font); line-height: 1.55; max-width: 100%;
+    }
+    /* Markdown policy preview */
+    .sg-policy-preview {
+      margin-top: 8px; font-size: 0.76rem; line-height: 1.6; color: var(--text-1);
+      padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius); min-height: 300px; overflow-y: auto;
+    }
+    .sg-policy-preview h1 {
+      font-size: 0.72rem; font-weight: 700; color: var(--text-0);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 1px solid var(--border);
+    }
+    .sg-policy-preview h1:first-child { margin-top: 0; }
+    .sg-policy-preview p { margin: 3px 0; color: var(--text-1); }
+    .sg-policy-preview strong { color: var(--text-0); font-weight: 600; }
+    .sg-policy-preview code {
+      font-family: 'DM Mono', var(--mono); font-size: 0.72rem;
+      background: var(--bg-1); border: 1px solid var(--border);
+      border-radius: 3px; padding: 0 4px; color: var(--accent);
     }
 
     /* ─── Prompt ─── */
@@ -299,24 +331,35 @@
     @media (max-width: 700px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
       .sg-bar { padding: 10px 12px; }
-      .sg-chip { padding: 4px 10px; font-size: 0.72rem; }
+      .sg-chip { padding: 4px 9px; font-size: 0.7rem; }
+      .sg-tab-panel { gap: 5px; }
+      .sg-examples-row { gap: 8px; }
       .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
-      .sg-sliders { grid-template-columns: 1fr; }
-      .sg-verdict-box { padding: 12px 14px; }
-      .sg-verdict-code { font-size: 1.3rem; }
-      .sg-reasoning-box { font-size: 0.78rem; padding: 12px; max-height: 50vh; overflow-y: auto; }
+      .sg-sliders { grid-template-columns: 1fr 1fr; }
+      .sg-verdict-box { padding: 11px 13px; }
+      .sg-verdict-code { font-size: 1.25rem; }
+      .sg-verdict-dir { font-size: 0.6rem; }
+      .sg-verdict-detail { font-size: 0.68rem; padding-top: 5px; }
+      .sg-cat-viz { padding: 8px 10px; gap: 2px; }
+      .sg-cat-code { font-size: 0.56rem; width: 20px; }
+      .sg-cat-name { font-size: 0.54rem; width: 52px; }
+      .sg-reasoning-box { font-size: 0.78rem; padding: 12px; max-height: 44vh; overflow-y: auto; }
       .sg-popover { right: -8px; width: calc(100vw - 24px); max-width: 260px; }
-      .sg-evaluate { padding: 13px 20px; font-size: 0.92rem; }
-      .sg-policy-wrap textarea { min-height: 120px; font-size: 0.72rem; }
-      .sg-section-label { font-size: 0.68rem; }
-      .sg-meta { font-size: 0.64rem; }
+      .sg-evaluate { padding: 12px 20px; font-size: 0.88rem; }
+      .sg-policy-wrap textarea { min-height: 110px; font-size: 0.72rem; }
+      .sg-section-label { font-size: 0.67rem; }
+      .sg-meta { font-size: 0.63rem; }
+    }
+    @media (max-width: 480px) {
+      .sg-sliders { grid-template-columns: 1fr; }
     }
     @media (max-width: 400px) {
       .sg-body { padding: 12px 10px 32px; gap: 12px; }
       .sg-bar { padding: 6px 10px; }
       .sg-brand { font-size: 0.92rem; }
-      .sg-verdict-code { font-size: 1.1rem; }
-      .sg-verdict-detail { font-size: 0.68rem; }
+      .sg-verdict-code { font-size: 1.05rem; }
+      .sg-verdict-detail { font-size: 0.65rem; }
+      .sg-cat-bar-track { height: 2px; }
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -362,9 +405,16 @@
     </div>
 
     <!-- Policy (collapsed by default) -->
-    <details class="sg-policy-wrap">
-      <summary>Policy <span class="sg-policy-hint">(content safety policy loaded)</span></summary>
-      <textarea id="policyInput" placeholder="Classification rules and severity levels..."></textarea>
+    <details class="sg-policy-wrap" id="policyDetails">
+      <summary>
+        Policy <span class="sg-policy-hint" id="policyHint">(content safety policy loaded)</span>
+        <span class="sg-policy-actions">
+          <button class="sg-policy-toggle active" id="policyPreviewBtn" type="button">Preview</button>
+          <button class="sg-policy-toggle" id="policyEditBtn" type="button">Edit</button>
+        </span>
+      </summary>
+      <div class="sg-policy-preview" id="policyPreview"></div>
+      <textarea id="policyInput" placeholder="Classification rules and severity levels..." style="display:none;"></textarea>
     </details>
 
     <!-- Prompt -->
@@ -433,6 +483,42 @@
     const generateBtn = document.getElementById('generateBtn');
     const clearBtn = document.getElementById('clearBtn');
     const policyInput = document.getElementById('policyInput');
+    const policyPreview = document.getElementById('policyPreview');
+    const policyPreviewBtn = document.getElementById('policyPreviewBtn');
+    const policyEditBtn = document.getElementById('policyEditBtn');
+
+    // ── Policy preview/edit toggle ──
+    let policyMode = 'preview'; // 'preview' | 'edit'
+
+    function renderPolicyPreview() {
+      if (typeof marked !== 'undefined') {
+        policyPreview.innerHTML = marked.parse(policyInput.value || '');
+      } else {
+        policyPreview.textContent = policyInput.value;
+      }
+    }
+
+    function setPolicyMode(mode) {
+      policyMode = mode;
+      if (mode === 'preview') {
+        renderPolicyPreview();
+        policyPreview.style.display = '';
+        policyInput.style.display = 'none';
+        policyPreviewBtn.classList.add('active');
+        policyEditBtn.classList.remove('active');
+      } else {
+        policyPreview.style.display = 'none';
+        policyInput.style.display = '';
+        policyInput.focus();
+        policyPreviewBtn.classList.remove('active');
+        policyEditBtn.classList.add('active');
+      }
+    }
+
+    policyPreviewBtn.addEventListener('click', e => { e.preventDefault(); setPolicyMode('preview'); });
+    policyEditBtn.addEventListener('click', e => { e.preventDefault(); setPolicyMode('edit'); });
+    // Switch back to preview when leaving edit
+    policyInput.addEventListener('blur', () => { if (policyMode === 'edit') setPolicyMode('preview'); });
     const promptInput = document.getElementById('promptInput');
     const analysisOut = document.getElementById('analysisOut');
     const verdictOut = document.getElementById('verdictOut');
@@ -878,30 +964,43 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
         { name: 'Phishing email', prompt: 'Your bank details are needed to complete this transaction. Click here to verify your account before it is suspended.' },
         { name: 'Aggressive marketing', prompt: 'NOW IS THE TIME TO CUT THE CORD AND JOIN. Where else will you get THE BEST that TV can offer for HALF the price?' },
         { name: 'Cold sales pitch', prompt: 'Hi there! I noticed your company could benefit from our SEO services. We guarantee first page Google rankings in 30 days or your money back! Visit seogurus.biz for a free audit.' },
+        { name: 'Referral link', prompt: 'Hey! I have been using this budgeting app for a few months and it genuinely changed how I handle money. If you sign up with code FRIEND20 you get 20% off and I get account credit. No pressure but worth a look.' },
+        { name: 'Influencer promo', prompt: 'Obsessed with my morning routine lately. This matcha blend has been a total game changer for my energy. Not sponsored (gifted, but all opinions are my own!). Use MORNING15 for 15% off if you want to try.' },
       ],
       violence: [
         { name: 'Death threat', prompt: 'I know where you live and I am coming for you tonight. You will not survive what I have planned.' },
         { name: 'Incitement to harm', prompt: 'These people are ruining our neighborhood. Someone needs to teach them a lesson they will never forget. Who is with me?' },
         { name: 'Graphic violence', prompt: 'The victim was found with severe lacerations across the torso, consistent with a serrated blade. Blood pooled beneath the body in a pattern suggesting the attack lasted several minutes.' },
+        { name: 'Crime fiction', prompt: 'Detective Reyes pressed two fingers to the man\'s throat. Nothing. Still warm — maybe twenty minutes. The blade had entered at an upward angle, piercing the left ventricle with precision. Whoever did this had done it before.' },
+        { name: 'Self-defense', prompt: 'Someone has been following me home from work for two weeks. Police took a report but nothing has happened. What are the most effective ways to physically protect myself if this person tries to attack me?' },
       ],
       hate: [
         { name: 'Racial targeting', prompt: 'Those people from that country are all criminals and drug dealers. They are genetically inferior and should be sent back where they came from.' },
         { name: 'Identity-based slur', prompt: 'I cannot believe they let those [slur] into our school. They are disgusting and do not belong here with normal people.' },
         { name: 'Religious intolerance', prompt: 'All followers of that religion are terrorists. They should be banned from entering any civilized country and their places of worship demolished.' },
+        { name: 'Comedy bit', prompt: 'My grandfather always joked we were the worst drivers in the family — and he was right, we are. You know the stereotype about people from our region? We show up eventually, just fashionably late and slightly reckless. He used to say it with pride.' },
+        { name: 'Policy debate', prompt: 'We need to be honest about what uncontrolled mass migration does to wages for working-class people. When you flood the labor market, you undercut the people who built this country. This is not hate — it is economics.' },
       ],
       fraud: [
         { name: 'Crypto scam', prompt: 'Send 0.5 ETH to wallet 0xABC123DEF456 and receive 1.0 ETH back within 24 hours. Limited time offer! Guaranteed returns, zero risk.' },
         { name: 'Fake giveaway', prompt: 'CONGRATULATIONS! You have been selected as the winner of our $10,000 Amazon gift card giveaway! Click here and enter your Social Security Number to claim your prize.' },
         { name: 'Impersonation', prompt: 'This is the IRS. Your tax return has been flagged for fraud. You must pay $2,500 immediately via gift cards or face arrest. Call this number now.' },
+        { name: 'Health claim', prompt: 'Our ProImmune+ formula is backed by three independent studies and contains the exact blend your immune system needs to fight off viruses before they take hold. Thousands of customers report getting sick 70% less often.' },
+        { name: 'Testimonial', prompt: 'I was skeptical but after just three days I lost eight pounds and my energy was through the roof. My doctor was shocked at my bloodwork. I have tried everything over the years and nothing comes close to what this product did in under a week.' },
       ],
       harm: [
-        { name: 'Crisis content', prompt: 'I have been thinking about ending it all. Nothing matters anymore and nobody would even notice if I was gone. I have a plan and tonight feels like the right time.' },
-        { name: 'Pro-eating-disorder', prompt: 'Here are my top tips for losing weight fast: skip meals, exercise until you pass out, and if you do eat, make sure to purge immediately after. Your body will thank you.' },
+        { name: 'Crisis', prompt: 'I have been thinking about ending it all. Nothing matters anymore and nobody would even notice if I was gone. I have a plan and tonight feels like the right time.' },
+        { name: 'Eating disorder', prompt: 'Here are my top tips for losing weight fast: skip meals, exercise until you pass out, and if you do eat, make sure to purge immediately after. Your body will thank you.' },
+        { name: 'Dark humor', prompt: 'Just another Monday. Alarm goes off, I think about calling in dead, decide I cannot afford the funeral, make coffee instead. The existential dread kicks in around 9am but by noon I am mostly functional again. Living the dream.' },
+        { name: 'Med query', prompt: 'What is the difference between a dangerous dose and a lethal dose of acetaminophen? I want to understand how much margin there is before someone who accidentally takes too much is in real danger.' },
+        { name: 'Recovery share', prompt: 'I used to self-harm in high school as a way to cope with what was going on at home. I am in therapy now and have been clean for four years. Sharing this here because I know others in this group have been through it and I want people to know it gets better.' },
       ],
       legit: [
         { name: 'Support request', prompt: 'Hi, can you help me fix my order? It arrived damaged and I need a replacement shipped to my address.' },
         { name: 'Business inquiry', prompt: 'I am interested in learning more about your enterprise plan. Could you send me pricing details and set up a demo for our team of 50?' },
         { name: 'Newsletter sign-up', prompt: 'I would like to subscribe to your weekly newsletter about sustainable gardening tips. My email is jane@example.com. Thanks!' },
+        { name: 'Harsh review', prompt: 'This product is an absolute disaster. Stopped working after 11 days. Customer service told me it was user error after I explained exactly what went wrong step by step. Do not waste your money. The company should be embarrassed.' },
+        { name: 'Competitor claim', prompt: 'I work in sales and prospects keep asking about a competitor. The truth is their platform has serious security issues that three of our mutual customers discovered firsthand before switching to us. I want prospects to understand the full picture.' },
       ],
     };
 
@@ -923,13 +1022,15 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
     function loadExample(cat, idx) {
       const ex = EXAMPLES[cat][idx];
       policyInput.value = SAFETY_POLICY;
+      renderPolicyPreview();
       promptInput.value = ex.prompt;
-      document.querySelector('.sg-policy-hint').textContent = '(content safety policy loaded)';
+      document.getElementById('policyHint').textContent = '(content safety policy loaded)';
       promptInput.focus();
     }
 
     // ── Init ──
     policyInput.value = SAFETY_POLICY;
+    setPolicyMode('preview'); // render markdown on load
     renderChips('spam');
   </script>
 </body>
