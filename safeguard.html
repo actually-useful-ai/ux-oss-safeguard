@@ -85,6 +85,7 @@
       font-family: var(--font); cursor: pointer; transition: all var(--ease);
     }
     .sg-popover-toggle:hover { color: var(--text-0); border-color: var(--border-hover); }
+    .sg-popover-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     /* ─── Body ─── */
     .sg-body {
@@ -235,8 +236,11 @@
     .sg-md-text { font-size: 0.71rem; color: var(--text-2); padding-left: 10px; }
 
     /* ─── Prompt ─── */
-    @supports (-webkit-touch-callout: none) {
-      textarea, input[type="range"] { font-size: 16px !important; }
+    /* Prevent iOS zoom on input focus — scoped to small viewports only */
+    @media (max-width: 768px) {
+      @supports (-webkit-touch-callout: none) {
+        textarea, input[type="range"] { font-size: 16px !important; }
+      }
     }
     .sg-evaluate {
       flex: 1; padding: 11px 24px; background: var(--accent); color: #fff; border: none;
