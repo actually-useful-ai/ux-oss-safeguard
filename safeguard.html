@@ -26,8 +26,16 @@
     html { font-size: var(--font-size-base, 15px); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     [data-reduced-motion="true"] * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 
+    /* ─── Skip nav ─── */
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; padding: 8px 14px; background: var(--accent); color: #fff; border-radius: 0 0 6px 0; text-decoration: none; font-size: 0.9rem; font-weight: 600; }
+    .skip-link:focus { left: 0; }
+
+    /* ─── WCAG contrast: secondary text needs 4.5:1 on bg-1 ─── */
+    :root { --text-2: #767680; }
+    [data-theme="dark"] { --text-2: #8c8c99; }
+
     *, *::before, *::after { box-sizing: border-box; }
-    body { padding: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100vh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    body { padding: 0; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 
     /* ─── Header ─── */
     .sg-bar {
@@ -41,14 +49,6 @@
     }
     .sg-bar-left { display: flex; align-items: center; gap: 10px; }
     .sg-brand { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
-    .sg-nav { display: flex; gap: 2px; }
-    .sg-nav a {
-      padding: 3px 10px; border: 1px solid transparent; border-radius: 4px;
-      font-size: 0.75rem; font-weight: 600; color: var(--text-2);
-      text-decoration: none; transition: all var(--ease); letter-spacing: 0.02em;
-    }
-    .sg-nav a:hover { color: var(--text-0); background: var(--bg-2); }
-    .sg-nav a.active { color: var(--accent); background: var(--accent-soft); }
 
     /* ─── Settings ─── */
     .sg-settings-wrap { position: relative; }
@@ -129,12 +129,12 @@
       font-size: 0.84rem; line-height: 1.65; color: var(--text-1);
       background: var(--bg-1); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: 11px 14px;
-      min-height: 64px; max-height: 150px; overflow-y: auto;
+      min-height: 80px; max-height: 240px; overflow-y: auto;
       white-space: pre-wrap; word-break: break-word;
+      resize: vertical; font-family: var(--font);
+      width: 100%; display: block;
     }
-    .sg-example-text:empty::before {
-      content: 'Select a scenario above'; color: var(--text-2); font-style: italic;
-    }
+    .sg-example-text::placeholder { color: var(--text-2); font-style: italic; }
     .sg-example-foot { display: flex; gap: 8px; align-items: center; }
 
     .sg-section-label {
@@ -169,6 +169,7 @@
     }
     .sg-policy-toggle:hover { color: var(--text-0); border-color: var(--border-hover); }
     .sg-policy-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .sg-policy-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .sg-policy-wrap textarea {
       margin-top: 8px; font-size: 0.76rem; min-height: 300px;
       font-family: var(--font); line-height: 1.55; max-width: 100%;
@@ -247,6 +248,7 @@
       cursor: pointer; padding: 4px 8px; font-family: var(--font); transition: color var(--ease);
     }
     .sg-clear-link:hover { color: var(--text-0); }
+    .sg-clear-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
     /* ─── Divider ─── */
     .sg-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
@@ -268,7 +270,7 @@
       letter-spacing: 0.03em; padding: 14px 16px; border: 2px solid var(--border);
       border-radius: var(--radius); background: var(--bg-1); color: var(--text-0);
       transition: all 0.25s ease;
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; flex-direction: column; gap: 6px; flex: 1;
     }
     .sg-verdict-box.sev0 { border-color: #22c55e; background: rgba(34,197,94,0.05); color: #16a34a; }
     [data-theme="dark"] .sg-verdict-box.sev0 { color: #4ade80; }
@@ -346,6 +348,7 @@
       padding: 14px 16px; background: var(--bg-2); border: 1px solid var(--border);
       border-radius: var(--radius); white-space: pre-wrap; word-break: break-word;
       flex: 1; overflow-y: auto; transition: all var(--ease);
+      min-height: 120px; max-height: 60vh;
     }
     .sg-reasoning-box.streaming { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
     .sg-reasoning-box.streaming::after { content: '\2588'; animation: blink-cursor 0.75s step-end infinite; color: var(--accent); }
@@ -362,15 +365,17 @@
     .sg-advanced summary::-webkit-details-marker { display: none; }
     .sg-advanced summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; display: inline-block; }
     .sg-advanced[open] summary::before { transform: rotate(90deg); }
+    .sg-policy-wrap summary:focus-visible,
+    .sg-advanced summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
     .sg-sliders { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 8px; }
     .sg-slider-group { display: flex; flex-direction: column; gap: 3px; }
     .sg-slider-label { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 600; color: var(--text-2); }
-    .sg-slider-label label { font-size: 0.68rem; font-weight: 600; color: var(--text-2); margin: 0; }
+    .sg-slider-label label { margin: 0; }
     .sg-slider-group input[type=range] { width: 100%; accent-color: var(--accent); }
 
     @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-    @media (max-width: 700px) {
+    @media (max-width: 768px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
       .sg-bar { padding: 10px 12px; }
       .sg-example-card { padding: 14px 14px; gap: 10px; }
@@ -384,7 +389,7 @@
       .sg-cat-viz { padding: 8px 10px; gap: 2px; }
       .sg-cat-code { font-size: 0.56rem; width: 20px; }
       .sg-cat-name { font-size: 0.54rem; width: 52px; }
-      .sg-reasoning-box { font-size: 0.78rem; padding: 12px; max-height: 44vh; overflow-y: auto; }
+      .sg-reasoning-box { font-size: 0.78rem; padding: 12px; }
       .sg-popover { right: -8px; width: calc(100vw - 24px); max-width: 260px; }
       .sg-evaluate { padding: 12px 20px; font-size: 0.88rem; }
       .sg-policy-wrap textarea { min-height: 110px; font-size: 0.72rem; }
@@ -402,25 +407,25 @@
       .sg-verdict-detail { font-size: 0.65rem; }
       .sg-cat-bar-track { height: 2px; }
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <header class="sg-bar">
     <div class="sg-bar-left">
       <span class="sg-brand">OpenAI OSS-Safeguard</span>
     </div>
     <div class="sg-settings-wrap">
       <button class="sg-gear" id="settingsBtn" aria-label="Settings" aria-expanded="false" aria-controls="settingsPopover">&#9881;</button>
-      <div id="settingsPopover" class="sg-popover" role="dialog" aria-label="Settings">
-        <div class="sg-popover-row"><label>Theme</label><button class="sg-popover-toggle" id="themeBtn">Toggle</button></div>
+      <div id="settingsPopover" class="sg-popover" aria-label="Settings panel">
+        <div class="sg-popover-row"><span>Theme</span><button class="sg-popover-toggle" id="themeBtn" aria-label="Toggle theme">Toggle</button></div>
         <div class="sg-popover-row">
-          <label>Size</label>
+          <span>Size</span>
           <div class="sg-size-btns" role="group" aria-label="Font size">
-            <button class="sg-size-btn" data-size="sm" aria-label="Small">S</button>
-            <button class="sg-size-btn active" data-size="md" aria-label="Medium">M</button>
-            <button class="sg-size-btn" data-size="lg" aria-label="Large">L</button>
-            <button class="sg-size-btn" data-size="xl" aria-label="Extra large">XL</button>
+            <button class="sg-size-btn" data-size="sm" aria-label="Small" aria-pressed="false">S</button>
+            <button class="sg-size-btn active" data-size="md" aria-label="Medium" aria-pressed="true">M</button>
+            <button class="sg-size-btn" data-size="lg" aria-label="Large" aria-pressed="false">L</button>
+            <button class="sg-size-btn" data-size="xl" aria-label="Extra large" aria-pressed="false">XL</button>
           </div>
         </div>
         <div class="sg-popover-row"><label for="motionCheck">Reduce motion</label><input type="checkbox" id="motionCheck"></div>
@@ -428,7 +433,7 @@
     </div>
   </header>
 
-  <main class="sg-body">
+  <main class="sg-body" id="main-content" tabindex="-1">
     <!-- Primary example card -->
     <div class="sg-example-card">
       <span class="sg-example-lbl">Try an example</span>
@@ -444,27 +449,24 @@
         </select>
         <select class="sg-cat-select sg-scenario-select" id="scenarioSelect" aria-label="Example scenario"></select>
       </div>
-      <div class="sg-example-text" id="exampleText" role="region" aria-label="Selected scenario content"></div>
+      <textarea class="sg-example-text" id="exampleText" placeholder="Select a scenario above, or type your own content here…" aria-label="Content to evaluate" rows="4"></textarea>
       <div class="sg-example-foot">
         <button class="sg-evaluate" id="generateBtn">Evaluate</button>
-        <button class="sg-clear-link" id="clearBtn">Clear</button>
+        <button class="sg-clear-link" id="clearBtn" aria-label="Clear content and results">Clear</button>
       </div>
     </div>
-
-    <!-- Hidden prompt holder (read by generate()) -->
-    <textarea id="promptInput" style="display:none;" aria-hidden="true"></textarea>
 
     <!-- Policy (collapsed by default) -->
     <details class="sg-policy-wrap" id="policyDetails">
       <summary>
         Policy <span class="sg-policy-hint" id="policyHint">(content safety policy loaded)</span>
-        <span class="sg-policy-actions">
-          <button class="sg-policy-toggle active" id="policyPreviewBtn" type="button">Preview</button>
-          <button class="sg-policy-toggle" id="policyEditBtn" type="button">Edit</button>
-        </span>
       </summary>
+      <span class="sg-policy-actions">
+        <button class="sg-policy-toggle active" id="policyPreviewBtn" type="button" aria-pressed="true">Preview</button>
+        <button class="sg-policy-toggle" id="policyEditBtn" type="button" aria-pressed="false">Edit</button>
+      </span>
       <div class="sg-policy-preview" id="policyPreview"></div>
-      <textarea id="policyInput" placeholder="Classification rules and severity levels..." style="display:none;"></textarea>
+      <textarea id="policyInput" placeholder="Classification rules and severity levels..." style="display:none;" aria-label="Safety policy editor"></textarea>
     </details>
 
     <hr class="sg-divider">
@@ -591,21 +593,22 @@
         policyPreview.style.display = '';
         policyInput.style.display = 'none';
         policyPreviewBtn.classList.add('active');
+        policyPreviewBtn.setAttribute('aria-pressed', 'true');
         policyEditBtn.classList.remove('active');
+        policyEditBtn.setAttribute('aria-pressed', 'false');
       } else {
         policyPreview.style.display = 'none';
         policyInput.style.display = '';
         policyInput.focus();
         policyPreviewBtn.classList.remove('active');
+        policyPreviewBtn.setAttribute('aria-pressed', 'false');
         policyEditBtn.classList.add('active');
+        policyEditBtn.setAttribute('aria-pressed', 'true');
       }
     }
 
     policyPreviewBtn.addEventListener('click', e => { e.preventDefault(); setPolicyMode('preview'); });
     policyEditBtn.addEventListener('click', e => { e.preventDefault(); setPolicyMode('edit'); });
-    // Switch back to preview when leaving edit
-    policyInput.addEventListener('blur', () => { if (policyMode === 'edit') setPolicyMode('preview'); });
-    const promptInput = document.getElementById('promptInput');
     const analysisOut = document.getElementById('analysisOut');
     const verdictOut = document.getElementById('verdictOut');
     const metaOut = document.getElementById('metaOut');
@@ -748,7 +751,11 @@
     }
     function setFontSize(size, save = true) {
       document.documentElement.dataset.fontSize = size;
-      document.querySelectorAll('.sg-size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+      document.querySelectorAll('.sg-size-btn').forEach(b => {
+        const active = b.dataset.size === size;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
       if (save) saveA11y();
     }
     function setMotion(val, save = true) {
@@ -764,7 +771,7 @@
     // ── Settings popover ──
     const settingsBtn = document.getElementById('settingsBtn');
     const popover = document.getElementById('settingsPopover');
-    settingsBtn.addEventListener('click', e => { e.stopPropagation(); const open = popover.classList.toggle('open'); settingsBtn.setAttribute('aria-expanded', open); });
+    settingsBtn.addEventListener('click', e => { e.stopPropagation(); const open = popover.classList.toggle('open'); settingsBtn.setAttribute('aria-expanded', open); if (open) { const first = popover.querySelector('button, input'); if (first) first.focus(); } });
     document.addEventListener('click', e => { if (!popover.contains(e.target) && e.target !== settingsBtn) { popover.classList.remove('open'); settingsBtn.setAttribute('aria-expanded', 'false'); }});
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && popover.classList.contains('open')) { popover.classList.remove('open'); settingsBtn.setAttribute('aria-expanded', 'false'); settingsBtn.focus(); }});
 
@@ -774,12 +781,12 @@
 
     // ── Generate ──
     generateBtn.addEventListener('click', generate);
-    promptInput.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); });
+    exampleText.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); });
 
     async function generate() {
       const policy = policyInput.value.trim();
-      const prompt = promptInput.value.trim();
-      if (!prompt) { promptInput.focus(); return; }
+      const prompt = exampleText.value.trim();
+      if (!prompt) { exampleText.focus(); return; }
 
       startTime = Date.now();
       const messages = [];
@@ -794,10 +801,11 @@
       setSignal(verdictSignal, '', 'Verdict');
       setSignal(analysisSignal, 'active', 'Reasoning');
       metaOut.textContent = '';
+      if (abortCtrl) abortCtrl.abort(); // cancel any in-flight request
       generateBtn.disabled = true;
       generateBtn.classList.add('loading');
-      // Collapse policy on evaluate
-      document.querySelector('.sg-policy-wrap').open = false;
+      clearBtn.textContent = 'Cancel';
+      resultsRow.setAttribute('aria-busy', 'true');
       // Scroll results into view
       resultsRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       startTimer();
@@ -824,7 +832,11 @@
           for (const line of dec.decode(value).split('\n').filter(l => l.trim())) {
             try {
               const data = JSON.parse(line);
-              if (data.done) continue;
+              if (data.done) {
+                const tok = data.eval_count ? ` · ${data.eval_count} tok` : '';
+                metaOut.textContent = `${MODEL} · ${((Date.now() - startTime) / 1000).toFixed(1)}s${tok}`;
+                continue;
+              }
               const token = data.message?.content || '';
               const thinking = data.message?.thinking || '';
 
@@ -893,8 +905,19 @@
         metaOut.textContent = `${MODEL} · ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
       } catch (err) {
         stopTimer();
-        if (err.name !== 'AbortError') { setOutput(analysisOut, `Error: ${err.message}`, false, 'reasoning'); setSignal(analysisSignal, 'error', 'Reasoning'); }
-      } finally { abortCtrl = null; generateBtn.disabled = false; generateBtn.classList.remove('loading'); }
+        if (err.name !== 'AbortError') {
+          setOutput(analysisOut, `Error: ${err.message}`, false, 'reasoning');
+          setSignal(analysisSignal, 'error', 'Reasoning');
+          setSignal(verdictSignal, 'error', 'Verdict');
+          verdictOut.innerHTML = '<span class="sg-verdict-placeholder">Classification failed — check your connection and try again</span>';
+        }
+      } finally {
+        abortCtrl = null;
+        generateBtn.disabled = false;
+        generateBtn.classList.remove('loading');
+        clearBtn.textContent = 'Clear';
+        resultsRow.removeAttribute('aria-busy');
+      }
     }
 
     function setOutput(el, text, streaming, type) {
@@ -973,8 +996,9 @@
     }
 
     clearBtn.addEventListener('click', () => {
-      promptInput.value = '';
-      exampleText.textContent = '';
+      exampleText.value = '';
+      scenarioSelect.value = '0';
+      if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
       setOutput(verdictOut, null, false, 'verdict'); setOutput(analysisOut, null, false, 'reasoning');
       verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
       catViz.classList.remove('visible'); catViz.innerHTML = '';
@@ -1125,6 +1149,7 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
 
     catSelect.addEventListener('change', () => {
       updateScenarioSelect(catSelect.value);
+      loadExample(catSelect.value, 0);
     });
 
     scenarioSelect.addEventListener('change', () => {
@@ -1134,13 +1159,13 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
     });
 
     function loadExample(cat, idx) {
-      const ex = EXAMPLES[cat][idx];
+      const items = EXAMPLES[cat] || [];
+      const ex = items[Math.min(idx, items.length - 1)];
+      if (!ex) return;
       policyInput.value = SAFETY_POLICY;
       renderPolicyPreview();
-      promptInput.value = ex.prompt;
-      exampleText.textContent = ex.prompt;
+      exampleText.value = ex.prompt;
       document.getElementById('policyHint').textContent = '(content safety policy loaded)';
-      generateBtn.focus();
     }
 
     // ── Init ──

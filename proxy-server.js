@@ -30,7 +30,10 @@ if (!HF_TOKEN) {
 }
 
 const server = http.createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin || '';
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://dr.eamer.dev').split(',');
+    if (allowedOrigins.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+    else res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -74,7 +77,12 @@ const server = http.createServer(async (req, res) => {
     // Serve screenshot files (for OG images)
     if (pathname.startsWith('/screenshots/') && pathname.endsWith('.png')) {
         try {
-            const img = await readFile(path.join(__dirname, pathname));
+            const screenshotsDir = path.resolve(__dirname, 'screenshots');
+            const imgPath = path.resolve(__dirname, pathname.slice(1));
+            if (!imgPath.startsWith(screenshotsDir + path.sep)) {
+                res.writeHead(403); res.end('Forbidden'); return;
+            }
+            const img = await readFile(imgPath);
             res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
             res.end(img);
         } catch {
@@ -130,11 +138,17 @@ const server = http.createServer(async (req, res) => {
     res.end('Not found');
 });
 
-// Collect request body
+// Collect request body (512 KB max)
+const MAX_BODY = 512 * 1024;
 function collectBody(req) {
     return new Promise((resolve, reject) => {
         const chunks = [];
-        req.on('data', c => chunks.push(c));
+        let total = 0;
+        req.on('data', c => {
+            total += c.length;
+            if (total > MAX_BODY) { req.destroy(); reject(new Error('Request body too large')); return; }
+            chunks.push(c);
+        });
         req.on('end', () => resolve(Buffer.concat(chunks).toString()));
         req.on('error', reject);
     });
@@ -185,8 +199,9 @@ async function streamHF(payload, res) {
                 let body = '';
                 hfRes.on('data', c => body += c);
                 hfRes.on('end', () => {
-                    res.writeHead(hfRes.statusCode, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: `HF API ${hfRes.statusCode}: ${body.slice(0, 200)}` }));
+                    console.error(`HF API ${hfRes.statusCode}:`, body.slice(0, 500));
+                    res.writeHead(hfRes.statusCode >= 500 ? 502 : hfRes.statusCode, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Classification service unavailable. Please try again.' }));
                     resolve();
                 });
                 return;
