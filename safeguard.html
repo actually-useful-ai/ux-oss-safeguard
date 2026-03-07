@@ -774,6 +774,10 @@
     document.getElementById('motionCheck').addEventListener('change', e => setMotion(e.target.checked));
     document.getElementById('themeBtn').addEventListener('click', () => { if (typeof toggleIOTheme === 'function') toggleIOTheme(); });
     loadA11y();
+    // Auto-detect OS motion preference if user has no stored setting
+    if (!localStorage.getItem(A11Y_KEY)) {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setMotion(true, false);
+    }
 
     // ── Settings popover ──
     const settingsBtn = document.getElementById('settingsBtn');
@@ -933,6 +937,7 @@
 
     function setOutput(el, text, streaming, type) {
       el.classList.toggle('streaming', !!streaming);
+      el.setAttribute('aria-busy', streaming ? 'true' : 'false');
       if (!text) {
         const cls = type === 'verdict' ? 'sg-verdict-placeholder' : 'sg-reasoning-placeholder';
         const msg = type === 'verdict' ? 'Pick an example or paste content to classify' : 'Chain of thought streams here during evaluation';
