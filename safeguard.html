@@ -1,841 +1,797 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-font-size="md" data-reduced-motion="false">
+<html lang="en" data-theme="light" data-font-size="md" data-reduced-motion="false">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollama Safeguard</title>
-    <style>
-        /* ---- CSS Custom Properties ---- */
-        :root {
-            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            --surface: rgba(0,0,0,0.2);
-            --surface-input: rgba(0,0,0,0.35);
-            --border: rgba(255,255,255,0.1);
-            --border-subtle: rgba(255,255,255,0.08);
-            --text: #e0e0e0;
-            --text-muted: #9ca3af;
-            --text-dim: #6b7280;
-            --accent: #00d4ff;
-            --accent-2: #7c3aed;
-            --chip-bg: rgba(255,255,255,0.05);
-            --chip-border: rgba(255,255,255,0.1);
-            --output-analysis-bg: rgba(124,58,237,0.12);
-            --output-analysis-border: rgba(124,58,237,0.25);
-            --output-verdict-bg: rgba(0,212,255,0.08);
-            --output-verdict-border: rgba(0,212,255,0.2);
-            --placeholder-color: rgba(255,255,255,0.2);
-            --font-size-base: 15px;
-        }
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safeguard · IO Suite</title>
+  <meta name="description" content="Classify content against custom safety policies">
+  <link rel="stylesheet" href="/io/shared/css/io-theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="/io/shared/js/theme.js"></script>
+  <style>
+    [data-font-size="sm"] { --font-size-base: 13px; }
+    [data-font-size="md"] { --font-size-base: 15px; }
+    [data-font-size="lg"] { --font-size-base: 17px; }
+    [data-font-size="xl"] { --font-size-base: 20px; }
+    html { font-size: var(--font-size-base, 15px); }
+    [data-reduced-motion="true"] * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 
-        [data-theme="light"] {
-            --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #dde8ff 100%);
-            --surface: rgba(255,255,255,0.75);
-            --surface-input: rgba(255,255,255,0.9);
-            --border: rgba(0,0,0,0.12);
-            --border-subtle: rgba(0,0,0,0.07);
-            --text: #1e1e2e;
-            --text-muted: #4b5563;
-            --text-dim: #6b7280;
-            --accent: #0369a1;
-            --accent-2: #6d28d9;
-            --chip-bg: rgba(0,0,0,0.04);
-            --chip-border: rgba(0,0,0,0.1);
-            --output-analysis-bg: rgba(109,40,217,0.07);
-            --output-analysis-border: rgba(109,40,217,0.2);
-            --output-verdict-bg: rgba(3,105,161,0.07);
-            --output-verdict-border: rgba(3,105,161,0.2);
-            --placeholder-color: rgba(0,0,0,0.3);
-        }
+    body { padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
 
-        [data-font-size="sm"] { --font-size-base: 13px; }
-        [data-font-size="md"] { --font-size-base: 15px; }
-        [data-font-size="lg"] { --font-size-base: 17px; }
-        [data-font-size="xl"] { --font-size-base: 20px; }
+    /* ─── Header ─── */
+    .sg-bar {
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .sg-bar-left { display: flex; align-items: center; gap: 10px; }
+    .sg-brand { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.02em; }
+    .sg-nav { display: flex; gap: 2px; }
+    .sg-nav a {
+      padding: 3px 10px; border: 1px solid transparent; border-radius: 4px;
+      font-size: 0.75rem; font-weight: 600; color: var(--text-2);
+      text-decoration: none; transition: all var(--ease); letter-spacing: 0.02em;
+    }
+    .sg-nav a:hover { color: var(--text-0); background: var(--bg-2); }
+    .sg-nav a.active { color: var(--accent); background: var(--accent-soft); }
 
-        html { font-size: var(--font-size-base); }
+    /* ─── Settings ─── */
+    .sg-settings-wrap { position: relative; }
+    .sg-gear {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-2); cursor: pointer; padding: 4px 8px;
+      font-size: 0.82rem; line-height: 1; transition: all var(--ease); font-family: var(--font);
+    }
+    .sg-gear:hover { color: var(--text-0); border-color: var(--border-hover); }
+    .sg-gear:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sg-popover {
+      position: absolute; top: calc(100% + 6px); right: 0; width: 240px;
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-lg); padding: 14px;
+      display: none; flex-direction: column; gap: 10px; z-index: 200;
+    }
+    .sg-popover.open { display: flex; }
+    .sg-popover-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.78rem; color: var(--text-1);
+    }
+    .sg-popover-row label { font-size: 0.78rem; font-weight: 500; color: var(--text-1); cursor: pointer; margin: 0; }
+    .sg-size-btns { display: flex; gap: 3px; }
+    .sg-size-btn {
+      padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px;
+      background: var(--bg-2); color: var(--text-2); font-size: 0.7rem; font-weight: 600;
+      font-family: var(--font); cursor: pointer; transition: all var(--ease);
+    }
+    .sg-size-btn:hover { color: var(--text-0); border-color: var(--border-hover); }
+    .sg-size-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .sg-popover-toggle {
+      padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: var(--bg-2); color: var(--text-1); font-size: 0.72rem; font-weight: 500;
+      font-family: var(--font); cursor: pointer; transition: all var(--ease);
+    }
+    .sg-popover-toggle:hover { color: var(--text-0); border-color: var(--border-hover); }
 
-        [data-reduced-motion="true"] * {
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-        }
+    /* ─── Body ─── */
+    .sg-body {
+      flex: 1; max-width: 900px; width: 100%; margin: 0 auto;
+      padding: 24px 24px 48px; display: flex; flex-direction: column; gap: 20px;
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ─── Results row (verdict 1/3 + reasoning 2/3) ─── */
+    .sg-results-row {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 16px; align-items: start;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    /* ─── Tabbed examples ─── */
+    .sg-tabs { display: flex; flex-direction: column; gap: 6px; }
+    .sg-tab-bar {
+      display: flex; gap: 4px; flex-wrap: wrap;
+    }
+    .sg-tab-bar[role="tablist"] { margin: 0; padding: 0; }
+    .sg-tab {
+      padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--bg-1); color: var(--text-2); font-size: 0.72rem; font-weight: 600;
+      font-family: var(--font); cursor: pointer; transition: all var(--ease);
+      letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .sg-tab:hover { color: var(--text-0); border-color: var(--border-hover); }
+    .sg-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sg-tab.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .sg-tab-panel {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .sg-chip {
+      padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg-1); color: var(--text-1); font-size: 0.78rem; font-weight: 500;
+      font-family: var(--font); cursor: pointer; transition: all var(--ease);
+    }
+    .sg-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .sg-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sg-chip:active { transform: scale(0.97); }
 
-        header {
-            padding: 1rem 2rem;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+    .sg-section-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      display: flex; align-items: center; gap: 6px;
+    }
 
-        h1 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #00d4ff, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    /* ─── Policy (collapsed by default) ─── */
+    .sg-policy-wrap summary {
+      cursor: pointer; list-style: none;
+      font-size: 0.72rem; font-weight: 700; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0; display: flex; align-items: center; gap: 5px; user-select: none;
+    }
+    .sg-policy-wrap summary::-webkit-details-marker { display: none; }
+    .sg-policy-wrap summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; display: inline-block; }
+    .sg-policy-wrap[open] summary::before { transform: rotate(90deg); }
+    .sg-policy-wrap .sg-policy-hint {
+      font-size: 0.72rem; font-weight: 400; color: var(--text-2);
+      text-transform: none; letter-spacing: 0; margin-left: 4px;
+    }
+    .sg-policy-wrap textarea {
+      margin-top: 8px; font-size: 0.84rem; min-height: 160px;
+      font-family: var(--font); line-height: 1.55;
+    }
 
-        .nav-links {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
+    /* ─── Prompt ─── */
+    .sg-prompt-area textarea { font-size: 0.9rem; min-height: 72px; }
+    .sg-actions-row { display: flex; gap: 8px; align-items: center; }
+    .sg-evaluate {
+      flex: 1; padding: 11px 24px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 700;
+      font-family: var(--font); cursor: pointer; transition: background var(--ease); letter-spacing: 0.01em;
+    }
+    .sg-evaluate:hover { background: var(--accent-hover); }
+    .sg-evaluate:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sg-evaluate:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sg-evaluate.loading { position: relative; color: transparent !important; pointer-events: none; }
+    .sg-evaluate.loading::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 16px; height: 16px; margin: -8px 0 0 -8px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    .sg-clear-link {
+      background: none; border: none; color: var(--text-2); font-size: 0.78rem;
+      cursor: pointer; padding: 4px 8px; font-family: var(--font); transition: color var(--ease);
+    }
+    .sg-clear-link:hover { color: var(--text-0); }
 
-        .nav-link {
-            padding: 0.25rem 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 99px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: all 0.15s;
-        }
+    /* ─── Divider ─── */
+    .sg-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 
-        .nav-link:hover { background: var(--chip-bg); color: var(--text); }
-        .nav-link.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.3); color: var(--accent); }
+    /* ─── Verdict ─── */
+    .sg-signal { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .sg-signal.active { background: var(--accent); animation: pulse-signal 1.4s ease-in-out infinite; }
+    .sg-signal.done { background: var(--green); }
+    .sg-signal.error { background: var(--red); }
+    @keyframes pulse-signal { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        /* Settings button + panel */
-        .settings-btn {
-            background: none; border: 1px solid var(--border); border-radius: 6px;
-            color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.5rem;
-            font-size: 1rem; line-height: 1; transition: color 0.15s;
-        }
-        .settings-btn:hover { color: var(--text); }
+    .sg-verdict-col { display: flex; flex-direction: column; gap: 6px; }
+    .sg-reasoning-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
-        .settings-panel {
-            position: fixed; top: 3.5rem; right: 1rem; z-index: 100;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 10px; padding: 1rem; min-width: 200px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; gap: 0.85rem;
-        }
+    .sg-verdict-box {
+      position: relative;
+      font-family: 'DM Mono', var(--mono); font-size: 1.2rem; font-weight: 500;
+      letter-spacing: 0.03em; padding: 16px 20px; border: 2px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-1); color: var(--text-0);
+      text-transform: uppercase; transition: all 0.25s ease; min-height: 100%;
+      display: flex; flex-direction: column; justify-content: center; gap: 8px;
+    }
+    .sg-verdict-box.pass { border-color: #22c55e; background: rgba(34,197,94,0.06); color: #16a34a; }
+    [data-theme="dark"] .sg-verdict-box.pass { color: #4ade80; }
+    .sg-verdict-box.fail { border-color: #ef4444; background: rgba(239,68,68,0.06); color: #dc2626; }
+    [data-theme="dark"] .sg-verdict-box.fail { color: #f87171; }
+    .sg-verdict-box.escalate { border-color: #f59e0b; background: rgba(245,158,11,0.06); color: #d97706; }
+    [data-theme="dark"] .sg-verdict-box.escalate { color: #fbbf24; }
+    .sg-verdict-box.streaming { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .sg-verdict-box.streaming::after { content: '\2588'; animation: blink-cursor 0.75s step-end infinite; color: var(--accent); margin-left: 2px; }
+    @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .settings-section { display: flex; flex-direction: column; gap: 0.4rem; }
-        .settings-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-        .settings-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    .sg-verdict-placeholder { color: var(--text-2); font-style: italic; font-family: var(--font); font-size: 0.88rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
 
-        .setting-opt {
-            padding: 0.25rem 0.65rem; border-radius: 6px;
-            border: 1px solid var(--chip-border); background: var(--chip-bg);
-            color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
-        }
-        .setting-opt:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-        .setting-opt.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.1); }
+    .sg-verdict-label {
+      font-family: 'DM Mono', var(--mono); font-size: 1.6rem; font-weight: 700;
+      letter-spacing: 0.06em; line-height: 1.1;
+    }
+    .sg-verdict-detail {
+      font-family: var(--font); font-size: 0.75rem; font-weight: 500;
+      text-transform: none; letter-spacing: 0; color: var(--text-1);
+      line-height: 1.4; border-top: 1px solid var(--border); padding-top: 8px;
+    }
 
-        .toggle-label { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+    /* ─── Reasoning ─── */
+    .sg-reasoning-box {
+      font-size: 0.84rem; line-height: 1.6; color: var(--text-1);
+      padding: 14px 16px; background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius); white-space: pre-wrap; word-break: break-word;
+      flex: 1; overflow-y: auto; transition: all var(--ease);
+    }
+    .sg-reasoning-box.streaming { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .sg-reasoning-box.streaming::after { content: '\2588'; animation: blink-cursor 0.75s step-end infinite; color: var(--accent); }
+    .sg-reasoning-placeholder { color: var(--text-2); font-style: italic; }
 
-        .main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0;
-            min-height: 0;
-        }
+    .sg-meta { font-size: 0.68rem; color: var(--text-2); font-family: 'DM Mono', var(--mono); letter-spacing: 0.02em; }
 
-        .panel {
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            overflow-y: auto;
-        }
+    /* ─── Advanced ─── */
+    .sg-advanced summary {
+      cursor: pointer; list-style: none; font-size: 0.68rem; font-weight: 700;
+      color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 5px; user-select: none; padding: 0;
+    }
+    .sg-advanced summary::-webkit-details-marker { display: none; }
+    .sg-advanced summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; display: inline-block; }
+    .sg-advanced[open] summary::before { transform: rotate(90deg); }
+    .sg-sliders { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 8px; }
+    .sg-slider-group { display: flex; flex-direction: column; gap: 3px; }
+    .sg-slider-label { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 600; color: var(--text-2); }
+    .sg-slider-label label { font-size: 0.68rem; font-weight: 600; color: var(--text-2); margin: 0; }
+    .sg-slider-group input[type=range] { width: 100%; accent-color: var(--accent); }
 
-        .panel-left {
-            border-right: 1px solid var(--border-subtle);
-        }
+    /* ─── Onload hint ─── */
+    .sg-hint {
+      font-size: 0.82rem; color: var(--text-2); text-align: center;
+      padding: 16px; font-style: italic;
+    }
 
-        .field-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-
-        label.field-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--surface-input);
-            color: var(--text);
-            font-size: 0.9rem;
-            font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-            resize: vertical;
-            line-height: 1.5;
-        }
-
-        textarea:focus { outline: none; border-color: var(--accent); }
-        textarea::placeholder { color: var(--placeholder-color); }
-
-        textarea.policy-area { min-height: 320px; }
-        textarea.prompt-area { min-height: 100px; }
-
-        .accordion summary {
-            cursor: pointer;
-            list-style: none;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            padding: 0.5rem 0;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            user-select: none;
-        }
-
-        .accordion summary::-webkit-details-marker { display: none; }
-        .accordion summary::before { content: '▶'; font-size: 0.7rem; transition: transform 0.2s; }
-        .accordion[open] summary::before { transform: rotate(90deg); }
-
-        .advanced-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            padding-top: 0.5rem;
-        }
-
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-
-        .slider-group input[type=range] {
-            width: 100%;
-            accent-color: #7c3aed;
-        }
-
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
-
-        .button-row {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .btn-primary {
-            flex: 1;
-            padding: 0.65rem 1.25rem;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #00d4ff, #7c3aed);
-            color: white;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-        .btn-secondary {
-            padding: 0.65rem 1.25rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-secondary:hover { background: var(--chip-bg); color: var(--text); }
-
-        .examples-section {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-
-        .examples-label {
-            font-size: 0.78rem;
-            color: var(--text-dim);
-        }
-
-        .example-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-        }
-
-        .chip {
-            padding: 0.25rem 0.65rem;
-            background: var(--chip-bg);
-            border: 1px solid var(--chip-border);
-            border-radius: 99px;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.15s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 240px;
-        }
-
-        .chip:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-
-        /* Right panel outputs */
-        .output-box {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-
-        .output-label-row {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .output-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .output-content {
-            padding: 1rem;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            line-height: 1.65;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-            transition: background 0.3s, border-color 0.3s;
-        }
-
-        .output-analysis {
-            background: var(--output-analysis-bg);
-            border: 1px solid var(--output-analysis-border);
-            color: #c4b5fd;
-            min-height: 320px;
-        }
-
-        .output-verdict {
-            background: var(--output-verdict-bg);
-            border: 1px solid var(--output-verdict-border);
-            color: var(--text);
-            min-height: 100px;
-        }
-
-        /* Analysis box states */
-        .output-analysis.state-active {
-            background: rgba(124,58,237,0.18);
-            border-color: rgba(124,58,237,0.4);
-        }
-        .output-analysis.state-done {
-            background: rgba(124,58,237,0.10);
-            border-color: rgba(124,58,237,0.22);
-        }
-        .output-analysis.state-error {
-            background: rgba(248,113,113,0.10);
-            border-color: rgba(248,113,113,0.3);
-        }
-
-        /* Verdict box states */
-        .output-verdict.valid   { border-color: rgba(74,222,128,0.45);  background: rgba(74,222,128,0.13); }
-        .output-verdict.invalid { border-color: rgba(248,113,113,0.45); background: rgba(248,113,113,0.13); }
-        .output-verdict.escalate{ border-color: rgba(251,191,36,0.5);   background: rgba(251,191,36,0.12); }
-
-        .meta-text {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            font-family: ui-monospace, monospace;
-        }
-
-        .spinner-inline {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(124,58,237,0.3);
-            border-top-color: #a78bfa;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.4rem;
-            vertical-align: middle;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .placeholder-text {
-            color: var(--placeholder-color);
-            font-style: italic;
-            font-family: ui-sans-serif, sans-serif;
-        }
-
-        /* Blinking cursor on active streaming box */
-        .output-content.streaming::after {
-            content: '▋';
-            animation: blink 0.85s step-end infinite;
-            color: #a78bfa;
-            font-size: 0.9em;
-        }
-
-        .output-verdict.streaming::after { color: #00d4ff; }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Glow on active box */
-        .output-analysis.streaming {
-            border-color: rgba(124,58,237,0.55) !important;
-            box-shadow: 0 0 0 2px rgba(124,58,237,0.12);
-        }
-
-        .output-verdict.streaming {
-            border-color: rgba(0,212,255,0.45) !important;
-            box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
-        }
-
-        @media (max-width: 800px) {
-            .main { grid-template-columns: 1fr; }
-            .panel-left { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-        }
-    </style>
+    @media (max-width: 700px) {
+      .sg-body { padding: 16px 14px 40px; gap: 16px; }
+      .sg-bar { padding: 8px 14px; }
+      .sg-tab-bar { gap: 3px; }
+      .sg-tab { padding: 3px 10px; font-size: 0.68rem; }
+      .sg-results-row { grid-template-columns: 1fr; }
+      .sg-sliders { grid-template-columns: 1fr; }
+      .sg-verdict-box { font-size: 1rem; padding: 14px; }
+      .sg-verdict-label { font-size: 1.3rem; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Ollama Safeguard</h1>
-        <nav class="nav-links">
-            <a class="nav-link" href="./ollama-chat.html">Chat</a>
-            <a class="nav-link active" href="./safeguard.html">Safeguard</a>
-            <button class="settings-btn" id="settingsBtn" aria-label="Accessibility settings">&#9881;</button>
-        </nav>
-    </header>
+  <header class="sg-bar">
+    <div class="sg-bar-left">
+      <span class="sg-brand">Safeguard</span>
+    </div>
+    <div class="sg-settings-wrap">
+      <button class="sg-gear" id="settingsBtn" aria-label="Settings" aria-expanded="false" aria-controls="settingsPopover">&#9881;</button>
+      <div id="settingsPopover" class="sg-popover" role="dialog" aria-label="Settings">
+        <div class="sg-popover-row"><label>Theme</label><button class="sg-popover-toggle" id="themeBtn">Toggle</button></div>
+        <div class="sg-popover-row">
+          <label>Size</label>
+          <div class="sg-size-btns" role="group" aria-label="Font size">
+            <button class="sg-size-btn" data-size="sm" aria-label="Small">S</button>
+            <button class="sg-size-btn active" data-size="md" aria-label="Medium">M</button>
+            <button class="sg-size-btn" data-size="lg" aria-label="Large">L</button>
+            <button class="sg-size-btn" data-size="xl" aria-label="Extra large">XL</button>
+          </div>
+        </div>
+        <div class="sg-popover-row"><label for="motionCheck">Reduce motion</label><input type="checkbox" id="motionCheck"></div>
+      </div>
+    </div>
+  </header>
 
-    <div class="settings-panel" id="settingsPanel" hidden>
-        <div class="settings-section">
-            <div class="settings-label">Theme</div>
-            <div class="settings-row">
-                <button class="setting-opt" data-setting="theme" data-value="dark">Dark</button>
-                <button class="setting-opt" data-setting="theme" data-value="light">Light</button>
-            </div>
-        </div>
-        <div class="settings-section">
-            <div class="settings-label">Font size</div>
-            <div class="settings-row">
-                <button class="setting-opt" data-setting="fontSize" data-value="sm">S</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="md">M</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="lg">L</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="xl">XL</button>
-            </div>
-        </div>
-        <div class="settings-section">
-            <div class="settings-row">
-                <label class="toggle-label">
-                    <input type="checkbox" id="reducedMotionToggle"> Reduce motion
-                </label>
-            </div>
-        </div>
+  <main class="sg-body">
+    <!-- Tabbed examples -->
+    <div class="sg-tabs">
+      <div class="sg-section-label" style="margin-bottom: 2px;">Try an example</div>
+      <div class="sg-tab-bar" role="tablist" aria-label="Example categories">
+        <button class="sg-tab active" role="tab" aria-selected="true" data-cat="spam">Spam</button>
+        <button class="sg-tab" role="tab" aria-selected="false" data-cat="violence">Violence</button>
+        <button class="sg-tab" role="tab" aria-selected="false" data-cat="hate">Hate</button>
+        <button class="sg-tab" role="tab" aria-selected="false" data-cat="fraud">Fraud</button>
+        <button class="sg-tab" role="tab" aria-selected="false" data-cat="harm">Self-Harm</button>
+        <button class="sg-tab" role="tab" aria-selected="false" data-cat="legit">Legitimate</button>
+      </div>
+      <div class="sg-tab-panel" id="tabPanel" role="tabpanel" aria-label="Example prompts"></div>
     </div>
 
-    <div class="main">
-        <!-- Left: inputs -->
-        <div class="panel panel-left">
-            <div class="examples-section">
-                <div class="examples-label">Examples (loads spam policy + prompt)</div>
-                <div class="example-chips">
-                    <span class="chip" onclick="loadExample(0)">Phishing attempt</span>
-                    <span class="chip" onclick="loadExample(1)">Aggressive marketing</span>
-                    <span class="chip" onclick="loadExample(2)">Weight loss message</span>
-                    <span class="chip" onclick="loadExample(3)">Gold investment pitch</span>
-                    <span class="chip" onclick="loadExample(4)">Blank policy + custom</span>
-                </div>
-            </div>
+    <!-- Policy (collapsed, pre-loaded) -->
+    <details class="sg-policy-wrap" open>
+      <summary>Policy <span class="sg-policy-hint">(content safety policy loaded)</span></summary>
+      <textarea id="policyInput" placeholder="Classification rules and severity levels..."></textarea>
+    </details>
 
-            <div class="field-group">
-                <label class="field-label" for="policyInput">Policy</label>
-                <textarea id="policyInput" class="policy-area" placeholder="Rules, tone, and constraints for the safeguard…"></textarea>
-            </div>
-
-            <div class="field-group">
-                <label class="field-label" for="promptInput">Prompt</label>
-                <textarea id="promptInput" class="prompt-area" placeholder="Content to evaluate…"></textarea>
-            </div>
-
-            <details class="accordion">
-                <summary>Advanced settings</summary>
-                <div class="advanced-grid">
-                    <div class="slider-group">
-                        <div class="slider-label">
-                            <span>temperature</span>
-                            <span id="tempVal">1.0</span>
-                        </div>
-                        <input type="range" id="temperature" min="0" max="1.5" step="0.05" value="1.0"
-                            oninput="document.getElementById('tempVal').textContent=parseFloat(this.value).toFixed(2)">
-                    </div>
-                    <div class="slider-group">
-                        <div class="slider-label">
-                            <span>top_p</span>
-                            <span id="topPVal">1.00</span>
-                        </div>
-                        <input type="range" id="topP" min="0" max="1" step="0.01" value="1.0"
-                            oninput="document.getElementById('topPVal').textContent=parseFloat(this.value).toFixed(2)">
-                    </div>
-                    <div class="slider-group">
-                        <div class="slider-label">
-                            <span>num_predict</span>
-                            <span id="numPredictVal">4096</span>
-                        </div>
-                        <input type="range" id="numPredict" min="256" max="8192" step="256" value="4096"
-                            oninput="document.getElementById('numPredictVal').textContent=this.value">
-                    </div>
-                </div>
-            </details>
-
-            <div class="button-row">
-                <button class="btn-primary" id="generateBtn">Generate</button>
-                <button class="btn-secondary" id="clearBtn">Clear</button>
-            </div>
-        </div>
-
-        <!-- Right: outputs -->
-        <div class="panel">
-            <div class="output-box">
-                <div class="output-label-row">
-                    <span class="output-label">Analysis</span>
-                </div>
-                <div class="output-content output-analysis" id="analysisOut">
-                    <span class="placeholder-text">Analysis will appear here…</span>
-                </div>
-            </div>
-
-            <div class="output-box">
-                <div class="output-label-row">
-                    <span class="output-label">Verdict</span>
-                </div>
-                <div class="output-content output-verdict" id="verdictOut">
-                    <span class="placeholder-text">Final answer will appear here…</span>
-                </div>
-            </div>
-
-            <div class="meta-text" id="metaOut"></div>
-        </div>
+    <!-- Prompt -->
+    <div class="sg-prompt-area">
+      <div class="sg-section-label" style="margin-bottom: 6px;">Content to evaluate</div>
+      <textarea id="promptInput" placeholder="Paste or type the message you want to classify..."></textarea>
+      <div class="sg-actions-row" style="margin-top: 8px;">
+        <button class="sg-evaluate" id="generateBtn">Evaluate</button>
+        <button class="sg-clear-link" id="clearBtn">Clear</button>
+      </div>
     </div>
 
-    <script>
-        // ---- Config ----
-        const SPLIT_TOKEN = 'assistantfinal';
-        const SPLIT_RE = /assistantfinal/i;
-        const CONFIG = { url: 'http://localhost:3000', model: 'gpt-oss-safeguard' };
+    <hr class="sg-divider">
 
-        let connected = true;
-        let abortCtrl = null;
-        let startTime = null;
-        let timerInterval = null;
+    <!-- Results: verdict (1/3) + reasoning (2/3) -->
+    <div class="sg-results-row" id="resultsRow">
+      <div class="sg-verdict-col">
+        <div class="sg-section-label">
+          <span class="sg-signal" id="verdictSignal" role="img" aria-label="Verdict: idle"></span>
+          Verdict
+        </div>
+        <div class="sg-verdict-box" id="verdictOut" role="status" aria-live="polite" aria-label="Classification verdict" tabindex="0">
+          <span class="sg-verdict-placeholder">Pick an example above or paste your own content to classify</span>
+        </div>
+      </div>
+      <div class="sg-reasoning-col">
+        <div class="sg-section-label">
+          <span class="sg-signal" id="analysisSignal" role="img" aria-label="Reasoning: idle"></span>
+          Reasoning
+        </div>
+        <div class="sg-reasoning-box" id="analysisOut" role="log" aria-live="polite" aria-label="Model reasoning">
+          <span class="sg-reasoning-placeholder">The model's chain of thought will stream here once you run an evaluation</span>
+        </div>
+      </div>
+    </div>
 
-        const generateBtn = document.getElementById('generateBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const policyInput = document.getElementById('policyInput');
-        const promptInput = document.getElementById('promptInput');
-        const analysisOut = document.getElementById('analysisOut');
-        const verdictOut = document.getElementById('verdictOut');
-        const metaOut = document.getElementById('metaOut');
+    <div class="sg-meta" id="metaOut" aria-live="polite"></div>
 
-        function startTimer() {
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                const s = ((Date.now() - startTime) / 1000).toFixed(1);
-                metaOut.textContent = `${CONFIG.model} · ${s}s`;
-            }, 100);
-        }
+    <details class="sg-advanced">
+      <summary>Parameters</summary>
+      <div class="sg-sliders">
+        <div class="sg-slider-group">
+          <div class="sg-slider-label"><label for="temperature">temperature</label><span id="tempVal" aria-live="polite">1.00</span></div>
+          <input type="range" id="temperature" min="0" max="1.5" step="0.05" value="1.0" aria-describedby="tempVal" oninput="document.getElementById('tempVal').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="sg-slider-group">
+          <div class="sg-slider-label"><label for="topP">top_p</label><span id="topPVal" aria-live="polite">1.00</span></div>
+          <input type="range" id="topP" min="0" max="1" step="0.01" value="1.0" aria-describedby="topPVal" oninput="document.getElementById('topPVal').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="sg-slider-group">
+          <div class="sg-slider-label"><label for="numPredict">max tokens</label><span id="numPredictVal" aria-live="polite">4096</span></div>
+          <input type="range" id="numPredict" min="256" max="8192" step="256" value="4096" aria-describedby="numPredictVal" oninput="document.getElementById('numPredictVal').textContent=this.value">
+        </div>
+      </div>
+    </details>
+  </main>
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
+  <script>
+    const SPLIT_TOKEN = 'assistantfinal';
+    const SPLIT_RE = /assistantfinal/i;
+    const MODEL = 'gpt-oss-safeguard';
+    const API_BASE = location.hostname === 'localhost' ? location.origin : `${location.origin}/io/safeguard`;
 
-        // ---- Generate ----
-        generateBtn.addEventListener('click', generate);
-        promptInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate();
+    const generateBtn = document.getElementById('generateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const policyInput = document.getElementById('policyInput');
+    const promptInput = document.getElementById('promptInput');
+    const analysisOut = document.getElementById('analysisOut');
+    const verdictOut = document.getElementById('verdictOut');
+    const metaOut = document.getElementById('metaOut');
+    const analysisSignal = document.getElementById('analysisSignal');
+    const verdictSignal = document.getElementById('verdictSignal');
+    const resultsRow = document.getElementById('resultsRow');
+    const tabPanel = document.getElementById('tabPanel');
+
+    let abortCtrl = null, startTime = null, timerInterval = null, activeTab = 'spam';
+
+    // ── Verdict code decoder ──
+    const CATEGORY_NAMES = {
+      SP: 'Spam', VH: 'Violence & Harm', HS: 'Hate Speech', SH: 'Self-Harm',
+      SC: 'Sexual Content', FD: 'Fraud & Deception', WD: 'Weapons & Dangerous Materials', HR: 'Harassment',
+    };
+
+    const DECODE_MAP = {
+      SP0: { label: 'Not Spam', desc: 'Legitimate content' },
+      SP2: { label: 'Likely Spam', desc: 'Unsolicited promotion' },
+      SP3: { label: 'High-Risk Spam', desc: 'Aggressive tactics or automation' },
+      SP4: { label: 'Malicious Spam', desc: 'Phishing, malware, or fraud' },
+      VH0: { label: 'No Violence', desc: 'Within policy' },
+      VH2: { label: 'Likely Violence', desc: 'Implied threats or glorification' },
+      VH3: { label: 'High-Risk Violence', desc: 'Direct threats or incitement' },
+      VH4: { label: 'Extreme Violence', desc: 'Imminent danger or mass harm' },
+      HS0: { label: 'No Hate Speech', desc: 'Within policy' },
+      HS2: { label: 'Likely Hate Speech', desc: 'Stereotyping or coded language' },
+      HS3: { label: 'High-Risk Hate Speech', desc: 'Slurs or dehumanization' },
+      HS4: { label: 'Extreme Hate Speech', desc: 'Incitement to violence against groups' },
+      SH0: { label: 'No Self-Harm', desc: 'Within policy' },
+      SH2: { label: 'Likely Self-Harm', desc: 'Romanticizing or normalizing' },
+      SH3: { label: 'High-Risk Self-Harm', desc: 'Instructions or encouragement' },
+      SH4: { label: 'Extreme Self-Harm', desc: 'Active promotion of suicide or injury' },
+      SC0: { label: 'No Sexual Content', desc: 'Within policy' },
+      SC2: { label: 'Likely Sexual Content', desc: 'Suggestive or borderline material' },
+      SC3: { label: 'High-Risk Sexual Content', desc: 'Explicit material' },
+      SC4: { label: 'Extreme Sexual Content', desc: 'Non-consensual or exploitative' },
+      FD0: { label: 'No Fraud', desc: 'Within policy' },
+      FD2: { label: 'Likely Fraud', desc: 'Misleading claims or exaggeration' },
+      FD3: { label: 'High-Risk Fraud', desc: 'Scams or deliberate deception' },
+      FD4: { label: 'Extreme Fraud', desc: 'Impersonation or financial exploitation' },
+      WD0: { label: 'No Weapons Content', desc: 'Within policy' },
+      WD2: { label: 'Likely Weapons Content', desc: 'Discussion of dangerous materials' },
+      WD3: { label: 'High-Risk Weapons', desc: 'Manufacturing hints or sourcing' },
+      WD4: { label: 'Extreme Weapons', desc: 'CBRN instructions or trafficking' },
+      HR0: { label: 'No Harassment', desc: 'Within policy' },
+      HR2: { label: 'Likely Harassment', desc: 'Hostile or demeaning language' },
+      HR3: { label: 'High-Risk Harassment', desc: 'Targeted bullying or doxxing' },
+      HR4: { label: 'Extreme Harassment', desc: 'Stalking, threats, or coordinated abuse' },
+    };
+
+    function mapVerdict(text) {
+      const up = text.toUpperCase();
+      if (up.includes('ESCALATE')) return 'escalate';
+      const codeMatch = up.match(/(SP|VH|HS|SH|SC|FD|WD|HR)(\d)/);
+      if (codeMatch) {
+        const severity = parseInt(codeMatch[2]);
+        if (severity === 0) return 'pass';
+        return 'fail';
+      }
+      if (up.includes('INVALID')) return 'fail';
+      if (up.includes('VALID')) return 'pass';
+      return null;
+    }
+
+    function decodeVerdict(text) {
+      const up = text.toUpperCase();
+      const parts = [];
+      const codeMatch = up.match(/([DR])-(SP|VH|HS|SH|SC|FD|WD|HR)(\d)/);
+      if (codeMatch) {
+        const key = codeMatch[2] + codeMatch[3];
+        const info = DECODE_MAP[key];
+        if (info) parts.push(info.label);
+        const catName = CATEGORY_NAMES[codeMatch[2]];
+        if (catName) parts.push(catName);
+        // Include raw code reference
+        const rawMatch = text.match(/[DR]-[A-Z]{2}\d\.\w+/i);
+        if (rawMatch) parts.push(rawMatch[0]);
+      } else {
+        // Simple verdict without codes
+        if (up.includes('ESCALATE')) parts.push('Flagged for human review');
+        else if (up.includes('INVALID')) parts.push('Content violates the policy');
+        else if (up.includes('VALID')) parts.push('Content is within policy');
+      }
+      if (codeMatch && up.includes('ESCALATE')) parts.push('Flagged for review');
+      return parts.join(' \u00b7 ') || null;
+    }
+
+    // ── A11y ──
+    const A11Y_KEY = 'sg-a11y';
+    function loadA11y() {
+      try { const s = JSON.parse(localStorage.getItem(A11Y_KEY) || '{}'); if (s.fontSize) setFontSize(s.fontSize, false); if (s.reducedMotion) setMotion(s.reducedMotion, false); } catch {}
+    }
+    function saveA11y() {
+      localStorage.setItem(A11Y_KEY, JSON.stringify({ fontSize: document.documentElement.dataset.fontSize || 'md', reducedMotion: document.documentElement.dataset.reducedMotion === 'true' }));
+    }
+    function setFontSize(size, save = true) {
+      document.documentElement.dataset.fontSize = size;
+      document.querySelectorAll('.sg-size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+      if (save) saveA11y();
+    }
+    function setMotion(val, save = true) {
+      document.documentElement.dataset.reducedMotion = val ? 'true' : 'false';
+      const c = document.getElementById('motionCheck'); if (c) c.checked = !!val;
+      if (save) saveA11y();
+    }
+    document.querySelectorAll('.sg-size-btn').forEach(b => b.addEventListener('click', () => setFontSize(b.dataset.size)));
+    document.getElementById('motionCheck').addEventListener('change', e => setMotion(e.target.checked));
+    document.getElementById('themeBtn').addEventListener('click', () => { if (typeof toggleIOTheme === 'function') toggleIOTheme(); });
+    loadA11y();
+
+    // ── Settings popover ──
+    const settingsBtn = document.getElementById('settingsBtn');
+    const popover = document.getElementById('settingsPopover');
+    settingsBtn.addEventListener('click', e => { e.stopPropagation(); const open = popover.classList.toggle('open'); settingsBtn.setAttribute('aria-expanded', open); });
+    document.addEventListener('click', e => { if (!popover.contains(e.target) && e.target !== settingsBtn) { popover.classList.remove('open'); settingsBtn.setAttribute('aria-expanded', 'false'); }});
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && popover.classList.contains('open')) { popover.classList.remove('open'); settingsBtn.setAttribute('aria-expanded', 'false'); settingsBtn.focus(); }});
+
+    // ── Timer ──
+    function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { metaOut.textContent = `${MODEL} \u00b7 ${((Date.now() - startTime) / 1000).toFixed(1)}s`; }, 100); }
+    function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+    // ── Generate ──
+    generateBtn.addEventListener('click', generate);
+    promptInput.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); });
+
+    async function generate() {
+      const policy = policyInput.value.trim();
+      const prompt = promptInput.value.trim();
+      if (!prompt) { promptInput.focus(); return; }
+
+      startTime = Date.now();
+      const messages = [];
+      if (policy) messages.push({ role: 'system', content: policy });
+      messages.push({ role: 'user', content: prompt });
+
+      setOutput(verdictOut, null, false, 'verdict');
+      setOutput(analysisOut, null, false, 'reasoning');
+      verdictOut.classList.remove('pass', 'fail', 'escalate');
+      setSignal(verdictSignal, '', 'Verdict');
+      setSignal(analysisSignal, 'active', 'Reasoning');
+      metaOut.textContent = '';
+      generateBtn.disabled = true;
+      generateBtn.classList.add('loading');
+      // Collapse policy on evaluate
+      document.querySelector('.sg-policy-wrap').open = false;
+      // Scroll results into view
+      resultsRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      startTimer();
+
+      let buffer = '', thinkingBuf = '', hasThinking = false, splitFound = false;
+
+      try {
+        abortCtrl = new AbortController();
+        const resp = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: MODEL, messages, stream: true, options: {
+            temperature: parseFloat(document.getElementById('temperature').value),
+            top_p: parseFloat(document.getElementById('topP').value),
+            num_predict: parseInt(document.getElementById('numPredict').value),
+          }}),
+          signal: abortCtrl.signal,
         });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
-        async function generate() {
-            const policy = policyInput.value.trim();
-            const prompt = promptInput.value.trim();
-            if (!prompt) return;
-
-            startTime = Date.now();
-
-            const messages = [];
-            if (policy) messages.push({ role: 'system', content: policy });
-            messages.push({ role: 'user', content: prompt });
-
-            // Reset outputs
-            setOutput(analysisOut, null, false);
-            setOutput(verdictOut, null, false);
-            analysisOut.classList.remove('state-active', 'state-done', 'state-error');
-            verdictOut.classList.remove('valid', 'invalid', 'escalate');
-            metaOut.textContent = '';
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = '<span class="spinner-inline"></span>Running…';
-            analysisOut.classList.add('state-active');
-            startTimer();
-
-            let buffer = '';
-            let analysis = '';
-            let splitFound = false;
-
+        const reader = resp.body.getReader(), dec = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          for (const line of dec.decode(value).split('\n').filter(l => l.trim())) {
             try {
-                abortCtrl = new AbortController();
+              const data = JSON.parse(line);
+              if (data.done) continue;
+              const token = data.message?.content || '';
+              const thinking = data.message?.thinking || '';
 
-                const resp = await fetch(`${CONFIG.url}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: CONFIG.model,
-                        messages,
-                        stream: true,
-                        options: {
-                            temperature: parseFloat(document.getElementById('temperature').value),
-                            top_p: parseFloat(document.getElementById('topP').value),
-                            num_predict: parseInt(document.getElementById('numPredict').value),
-                        }
-                    }),
-                    signal: abortCtrl.signal
-                });
-
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-
-                const reader = resp.body.getReader();
-                const dec = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const lines = dec.decode(value).split('\n').filter(l => l.trim());
-                    for (const line of lines) {
-                        try {
-                            const data = JSON.parse(line);
-                            const token = data.message?.content || '';
-                            if (!token) continue;
-
-                            buffer += token;
-
-                            if (!splitFound) {
-                                const idx = buffer.search(SPLIT_RE);
-                                if (idx !== -1) {
-                                    splitFound = true;
-                                    analysis = buffer.slice(0, idx).replace(/^analysis\s*/i, '').trim();
-                                    const afterSplit = buffer.slice(idx + SPLIT_TOKEN.length).trim();
-                                    setOutput(analysisOut, analysis, false);
-                                    analysisOut.classList.remove('state-active');
-                                    analysisOut.classList.add('state-done');
-                                    setOutput(verdictOut, afterSplit || null, true);
-                                } else {
-                                    setOutput(analysisOut, buffer.replace(/^analysis\s*/i, ''), true);
-                                }
-                            } else {
-                                const verdict = buffer.slice(
-                                    buffer.search(SPLIT_RE) + SPLIT_TOKEN.length
-                                ).trim();
-                                setOutput(verdictOut, verdict, true);
-                                applyVerdictColor(verdict);
-                            }
-                        } catch {}
-                    }
-                }
-
-                // Final state
-                if (!splitFound) {
-                    analysis = buffer.replace(/^analysis\s*/i, '').trim();
-                    setOutput(analysisOut, analysis, false);
-                    analysisOut.classList.remove('state-active');
-                    analysisOut.classList.add('state-done');
-                    setOutput(verdictOut, null, false);
+              if (thinking) { thinkingBuf += thinking; setOutput(analysisOut, thinkingBuf, true, 'reasoning'); hasThinking = true; }
+              if (token) {
+                buffer += token;
+                if (hasThinking) {
+                  setOutput(analysisOut, thinkingBuf, false, 'reasoning');
+                  setSignal(analysisSignal, 'done', 'Reasoning');
+                  setSignal(verdictSignal, 'active', 'Verdict');
+                  setOutput(verdictOut, buffer, true, 'verdict');
+                  applyVerdictColor(buffer);
                 } else {
-                    const verdict = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
-                    setOutput(verdictOut, verdict, false);
-                    applyVerdictColor(verdict);
+                  const idx = buffer.search(SPLIT_RE);
+                  if (idx !== -1 && !splitFound) {
+                    splitFound = true;
+                    setOutput(analysisOut, buffer.slice(0, idx).replace(/^analysis\s*/i, '').trim(), false, 'reasoning');
+                    setSignal(analysisSignal, 'done', 'Reasoning');
+                    setSignal(verdictSignal, 'active', 'Verdict');
+                    setOutput(verdictOut, buffer.slice(idx + SPLIT_TOKEN.length).trim() || null, true, 'verdict');
+                  } else if (splitFound) {
+                    const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
+                    setOutput(verdictOut, v, true, 'verdict'); applyVerdictColor(v);
+                  } else {
+                    setOutput(analysisOut, buffer.replace(/^analysis\s*/i, ''), true, 'reasoning');
+                  }
                 }
-
-                stopTimer();
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                metaOut.textContent = `${CONFIG.model} · ${elapsed}s · temp ${document.getElementById('temperature').value} · top_p ${document.getElementById('topP').value}`;
-
-            } catch (err) {
-                stopTimer();
-                if (err.name !== 'AbortError') {
-                    setOutput(analysisOut, `Error: ${err.message}`, false);
-                    analysisOut.classList.remove('state-active', 'state-done');
-                    analysisOut.classList.add('state-error');
-                }
-            } finally {
-                abortCtrl = null;
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate';
-            }
+              }
+            } catch {}
+          }
         }
 
-        function setOutput(el, text, streaming) {
-            el.classList.toggle('streaming', !!streaming);
-            if (!text) {
-                el.innerHTML = '<span class="placeholder-text">' +
-                    (el === analysisOut ? 'Analysis will appear here…' : 'Final answer will appear here…') +
-                    '</span>';
-                return;
-            }
-            el.textContent = text;
+        // Final
+        if (hasThinking) {
+          setOutput(analysisOut, thinkingBuf.trim(), false, 'reasoning'); setSignal(analysisSignal, 'done', 'Reasoning');
+          if (buffer.trim()) { setOutput(verdictOut, buffer.trim(), false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(buffer.trim()); }
+        } else if (splitFound) {
+          const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
+          setOutput(verdictOut, v, false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(v);
+        } else {
+          const text = buffer.replace(/^analysis\s*/i, '').trim();
+          setOutput(analysisOut, text, false, 'reasoning'); setSignal(analysisSignal, 'done', 'Reasoning');
+          const ex = extractVerdict(text);
+          if (ex) { setOutput(verdictOut, ex, false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(ex); }
         }
 
-        function applyVerdictColor(text) {
-            verdictOut.classList.remove('valid', 'invalid', 'escalate');
-            const up = text.toUpperCase();
-            if (up.includes('ESCALATE')) verdictOut.classList.add('escalate');
-            else if (up.includes('INVALID')) verdictOut.classList.add('invalid');
-            else if (up.includes('VALID')) verdictOut.classList.add('valid');
+        stopTimer();
+        metaOut.textContent = `${MODEL} \u00b7 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+      } catch (err) {
+        stopTimer();
+        if (err.name !== 'AbortError') { setOutput(analysisOut, `Error: ${err.message}`, false, 'reasoning'); setSignal(analysisSignal, 'error', 'Reasoning'); }
+      } finally { abortCtrl = null; generateBtn.disabled = false; generateBtn.classList.remove('loading'); }
+    }
+
+    function setOutput(el, text, streaming, type) {
+      el.classList.toggle('streaming', !!streaming);
+      if (!text) {
+        const cls = type === 'verdict' ? 'sg-verdict-placeholder' : 'sg-reasoning-placeholder';
+        const msg = type === 'verdict' ? 'Pick an example or paste content to classify' : 'Chain of thought streams here during evaluation';
+        el.innerHTML = `<span class="${cls}">${msg}</span>`;
+        return;
+      }
+      if (type === 'verdict') {
+        const verdict = mapVerdict(text);
+        const decoded = decodeVerdict(text);
+        el.innerHTML = '';
+        if (verdict) {
+          const label = document.createElement('span');
+          label.className = 'sg-verdict-label';
+          label.textContent = verdict.toUpperCase();
+          el.appendChild(label);
+        } else {
+          // Still streaming, show raw text
+          el.appendChild(document.createTextNode(text));
         }
+        if (decoded) {
+          const detail = document.createElement('span');
+          detail.className = 'sg-verdict-detail';
+          detail.textContent = decoded;
+          el.appendChild(detail);
+        }
+      } else {
+        el.textContent = text;
+      }
+    }
 
-        // ---- Clear ----
-        clearBtn.addEventListener('click', () => {
-            policyInput.value = '';
-            promptInput.value = '';
-            setOutput(analysisOut, null, false);
-            setOutput(verdictOut, null, false);
-            analysisOut.classList.remove('state-active', 'state-done', 'state-error');
-            verdictOut.classList.remove('valid', 'invalid', 'escalate');
-            metaOut.textContent = '';
-            stopTimer();
-            if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
-        });
+    function setSignal(el, state, label) {
+      const map = { active: 'running', done: 'complete', error: 'error', '': 'idle' };
+      el.className = 'sg-signal' + (state ? ' ' + state : '');
+      el.setAttribute('aria-label', `${label}: ${map[state] || 'idle'}`);
+    }
 
-        // ---- Examples ----
-        const SPAM_POLICY = `Spam Policy (#SP)
-GOAL: Identify spam. Classify each EXAMPLE as VALID (no spam) or INVALID (spam) using this policy.
+    function extractVerdict(text) {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      for (let i = lines.length - 1; i >= Math.max(0, lines.length - 5); i--) {
+        const up = lines[i].toUpperCase();
+        if (up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) return lines.slice(i).join('\n');
+      }
+      return null;
+    }
 
-DEFINITIONS
-Spam: unsolicited, repetitive, deceptive, or low-value promotional content.
-Bulk Messaging: Same or similar messages sent repeatedly.
-Unsolicited Promotion: Promotion without user request or relationship.
-Deceptive Spam: Hidden or fraudulent intent (fake identity, fake offer).
-Link Farming: Multiple irrelevant or commercial links to drive clicks.
+    function applyVerdictColor(text) {
+      verdictOut.classList.remove('pass', 'fail', 'escalate');
+      const verdict = mapVerdict(text);
+      if (verdict) verdictOut.classList.add(verdict);
+    }
 
-ALLOWED (SP0 - Non-Spam or very low confidence signals)
-SP0.a Useful/info request - "How do I upload a product photo?"
-SP0.b Personalized communication - "Hi Sam, here is the report."
-SP0.c Business support - "Can you fix my order?"
-SP0.d Single contextual promo - "Thanks for subscribing - here's your welcome guide."
-SP0.e Generic request - "Please respond ASAP."
-Output: VALID
+    clearBtn.addEventListener('click', () => {
+      promptInput.value = '';
+      setOutput(verdictOut, null, false, 'verdict'); setOutput(analysisOut, null, false, 'reasoning');
+      verdictOut.classList.remove('pass', 'fail', 'escalate');
+      setSignal(analysisSignal, '', 'Reasoning'); setSignal(verdictSignal, '', 'Verdict');
+      metaOut.textContent = ''; stopTimer();
+      if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+      // Reopen policy on clear
+      document.querySelector('.sg-policy-wrap').open = true;
+    });
 
-LIKELY SPAM (SP2 - Medium Confidence)
-SP2.a Cold promotion - "Check out my Shopify course: shopcoach.biz"
-SP2.b Irrelevant ads - "Buy gold rings here!"
-SP2.c Excessive linking - multiple unrelated URLs
-Output: INVALID
+    // ── Content Safety Policy ──
+    const SAFETY_POLICY = `Content Safety Policy
 
-HIGH-RISK SPAM (SP3 - Strong Confidence)
-SP3.a Repetitive posting - "JOIN NOW JOIN NOW JOIN NOW"
-SP3.b Pyramid/affiliate bait - "Earn $$$ by recruiting members"
-SP3.c Fake engagement - "Comment 'YES' to win $500 gift card"
-Output: INVALID
+GOAL: Classify content against the following safety categories. Output VALID if content is within policy, or INVALID (+ ESCALATE for maximum severity) if it violates.
 
-MALICIOUS SPAM (SP4 - Maximum Severity)
-SP4.a Phishing - "Your account is locked. Enter your password here."
-SP4.b Malware/scam - "Download invoice.exe to claim payment."
-SP4.c Account takeover - "Send crypto to 0xABC123 to double your money."
-Output: INVALID + ESCALATE
+CATEGORIES
+
+#SP \u2014 Spam
+Unsolicited, repetitive, deceptive, or low-value promotional content.
+SP0: Legitimate communication, personal messages, support requests \u2192 VALID
+SP2: Cold promotion, irrelevant ads, excessive links \u2192 INVALID
+SP3: Repetitive posting, pyramid schemes, fake engagement \u2192 INVALID
+SP4: Phishing, malware distribution, account takeover \u2192 INVALID + ESCALATE
+
+#VH \u2014 Violence & Harm
+Threats, incitement, or graphic depictions of violence.
+VH0: News reporting, educational, fictional context \u2192 VALID
+VH2: Implied threats, glorification of violence \u2192 INVALID
+VH3: Direct threats, incitement to harm specific people \u2192 INVALID
+VH4: Imminent danger, mass violence planning \u2192 INVALID + ESCALATE
+
+#HS \u2014 Hate Speech
+Attacks based on protected characteristics including race, ethnicity, religion, gender, sexuality, disability.
+HS0: Respectful discussion of identity topics \u2192 VALID
+HS2: Stereotyping, coded language, dog whistles \u2192 INVALID
+HS3: Slurs, dehumanization, supremacist ideology \u2192 INVALID
+HS4: Incitement to violence against groups \u2192 INVALID + ESCALATE
+
+#SH \u2014 Self-Harm
+Content promoting, instructing, or glorifying self-injury or suicide.
+SH0: Mental health support, crisis resources, recovery discussion \u2192 VALID
+SH2: Romanticizing or normalizing self-harm \u2192 INVALID
+SH3: Instructions or active encouragement \u2192 INVALID
+SH4: Active promotion of suicide or self-injury methods \u2192 INVALID + ESCALATE
+
+#SC \u2014 Sexual Content
+Explicit sexual material or non-consensual sexual content.
+SC0: Age-appropriate relationship discussion, health education \u2192 VALID
+SC2: Suggestive or borderline material \u2192 INVALID
+SC3: Explicit sexual content \u2192 INVALID
+SC4: Non-consensual, exploitative, or involving minors \u2192 INVALID + ESCALATE
+
+#FD \u2014 Fraud & Deception
+Scams, impersonation, and deliberate misinformation.
+FD0: Honest marketing, factual claims, satire/parody \u2192 VALID
+FD2: Misleading claims, exaggerated promises \u2192 INVALID
+FD3: Deliberate scams, fake testimonials \u2192 INVALID
+FD4: Identity theft, impersonation, financial exploitation \u2192 INVALID + ESCALATE
+
+#WD \u2014 Weapons & Dangerous Materials
+Manufacturing instructions, procurement, or trafficking of weapons and dangerous substances.
+WD0: News coverage, policy discussion, historical context \u2192 VALID
+WD2: Detailed discussion of dangerous materials \u2192 INVALID
+WD3: Manufacturing hints, sourcing information \u2192 INVALID
+WD4: CBRN instructions, weapons trafficking \u2192 INVALID + ESCALATE
+
+#HR \u2014 Harassment
+Bullying, doxxing, stalking, and coordinated abuse.
+HR0: Criticism, disagreement, professional feedback \u2192 VALID
+HR2: Hostile or demeaning language targeting individuals \u2192 INVALID
+HR3: Targeted bullying, doxxing, revealing private info \u2192 INVALID
+HR4: Stalking, death threats, coordinated abuse campaigns \u2192 INVALID + ESCALATE
 
 LABEL FORMAT
-D-SP#: Depiction (presence of spam in content)
-R-SP#: Request (user asking to generate spam)`;
+D-XX#: Depiction (this type of material is present in the content)
+R-XX#: Request (user is asking to generate this type of material)
+Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for incitement)`;
 
-        const EXAMPLES = [
-            [SPAM_POLICY, "Your bank details are needed to complete this transaction. Click here to verify your account before it is suspended."],
-            [SPAM_POLICY, "NOW IS THE TIME TO CUT THE CORD AND JOIN. Where else will you get THE BEST that TV can offer for HALF the price?"],
-            [SPAM_POLICY, "I am SO tired of weight loss regiments not working --- it's been a lifetimes struggle. Can you help me write something authentic?"],
-            [SPAM_POLICY, "The value of gold has skyrocketed --- maybe it's time for you to get some?"],
-            ["", ""],
-        ];
+    // ── Categorized examples ──
+    const EXAMPLES = {
+      spam: [
+        { name: 'Phishing email', prompt: 'Your bank details are needed to complete this transaction. Click here to verify your account before it is suspended.' },
+        { name: 'Aggressive marketing', prompt: 'NOW IS THE TIME TO CUT THE CORD AND JOIN. Where else will you get THE BEST that TV can offer for HALF the price?' },
+        { name: 'Cold sales pitch', prompt: 'Hi there! I noticed your company could benefit from our SEO services. We guarantee first page Google rankings in 30 days or your money back! Visit seogurus.biz for a free audit.' },
+      ],
+      violence: [
+        { name: 'Death threat', prompt: 'I know where you live and I am coming for you tonight. You will not survive what I have planned.' },
+        { name: 'Incitement to harm', prompt: 'These people are ruining our neighborhood. Someone needs to teach them a lesson they will never forget. Who is with me?' },
+        { name: 'Graphic violence', prompt: 'The victim was found with severe lacerations across the torso, consistent with a serrated blade. Blood pooled beneath the body in a pattern suggesting the attack lasted several minutes.' },
+      ],
+      hate: [
+        { name: 'Racial targeting', prompt: 'Those people from that country are all criminals and drug dealers. They are genetically inferior and should be sent back where they came from.' },
+        { name: 'Identity-based slur', prompt: 'I cannot believe they let those [slur] into our school. They are disgusting and do not belong here with normal people.' },
+        { name: 'Religious intolerance', prompt: 'All followers of that religion are terrorists. They should be banned from entering any civilized country and their places of worship demolished.' },
+      ],
+      fraud: [
+        { name: 'Crypto scam', prompt: 'Send 0.5 ETH to wallet 0xABC123DEF456 and receive 1.0 ETH back within 24 hours. Limited time offer! Guaranteed returns, zero risk.' },
+        { name: 'Fake giveaway', prompt: 'CONGRATULATIONS! You have been selected as the winner of our $10,000 Amazon gift card giveaway! Click here and enter your Social Security Number to claim your prize.' },
+        { name: 'Impersonation', prompt: 'This is the IRS. Your tax return has been flagged for fraud. You must pay $2,500 immediately via gift cards or face arrest. Call this number now.' },
+      ],
+      harm: [
+        { name: 'Crisis content', prompt: 'I have been thinking about ending it all. Nothing matters anymore and nobody would even notice if I was gone. I have a plan and tonight feels like the right time.' },
+        { name: 'Pro-eating-disorder', prompt: 'Here are my top tips for losing weight fast: skip meals, exercise until you pass out, and if you do eat, make sure to purge immediately after. Your body will thank you.' },
+      ],
+      legit: [
+        { name: 'Support request', prompt: 'Hi, can you help me fix my order? It arrived damaged and I need a replacement shipped to my address.' },
+        { name: 'Business inquiry', prompt: 'I am interested in learning more about your enterprise plan. Could you send me pricing details and set up a demo for our team of 50?' },
+        { name: 'Newsletter sign-up', prompt: 'I would like to subscribe to your weekly newsletter about sustainable gardening tips. My email is jane@example.com. Thanks!' },
+      ],
+    };
 
-        function loadExample(i) {
-            const [policy, prompt] = EXAMPLES[i];
-            policyInput.value = policy;
-            promptInput.value = prompt;
-            promptInput.focus();
-        }
+    // ── Tab switching ──
+    function switchTab(cat) {
+      activeTab = cat;
+      document.querySelectorAll('.sg-tab').forEach(t => {
+        const isActive = t.dataset.cat === cat;
+        t.classList.toggle('active', isActive);
+        t.setAttribute('aria-selected', isActive);
+      });
+      renderChips(cat);
+    }
 
-        // ---- Accessibility Settings ----
-        const SETTINGS_KEY = 'a11ySettings';
-        const defaults = { theme: 'dark', fontSize: 'md', reducedMotion: false };
+    function renderChips(cat) {
+      tabPanel.innerHTML = '';
+      const items = EXAMPLES[cat] || [];
+      items.forEach((ex, i) => {
+        const chip = document.createElement('button');
+        chip.className = 'sg-chip';
+        chip.textContent = ex.name;
+        chip.addEventListener('click', () => loadExample(cat, i));
+        tabPanel.appendChild(chip);
+      });
+    }
 
-        function loadSettings() {
-            const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-            return { ...defaults, ...saved };
-        }
+    document.querySelectorAll('.sg-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.cat));
+    });
 
-        function applySettings(s) {
-            document.documentElement.dataset.theme = s.theme;
-            document.documentElement.dataset.fontSize = s.fontSize;
-            document.documentElement.dataset.reducedMotion = s.reducedMotion;
-            document.querySelectorAll('.setting-opt').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.value === s[btn.dataset.setting]);
-            });
-            document.getElementById('reducedMotionToggle').checked = s.reducedMotion;
-        }
+    function loadExample(cat, idx) {
+      const ex = EXAMPLES[cat][idx];
+      policyInput.value = SAFETY_POLICY;
+      promptInput.value = ex.prompt;
+      document.querySelector('.sg-policy-hint').textContent = '(content safety policy loaded)';
+      promptInput.focus();
+    }
 
-        function saveSettings(s) {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-        }
-
-        let settings = loadSettings();
-        applySettings(settings);
-
-        document.getElementById('settingsBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const panel = document.getElementById('settingsPanel');
-            panel.hidden = !panel.hidden;
-        });
-
-        document.addEventListener('click', () => {
-            document.getElementById('settingsPanel').hidden = true;
-        });
-
-        document.getElementById('settingsPanel').addEventListener('click', e => e.stopPropagation());
-
-        document.querySelectorAll('.setting-opt').forEach(btn => {
-            btn.addEventListener('click', () => {
-                settings[btn.dataset.setting] = btn.dataset.value;
-                saveSettings(settings);
-                applySettings(settings);
-            });
-        });
-
-        document.getElementById('reducedMotionToggle').addEventListener('change', (e) => {
-            settings.reducedMotion = e.target.checked;
-            saveSettings(settings);
-            applySettings(settings);
-        });
-    </script>
+    // ── Init ──
+    policyInput.value = SAFETY_POLICY;
+    renderChips('spam');
+  </script>
 </body>
 </html>

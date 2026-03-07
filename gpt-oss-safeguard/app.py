@@ -221,7 +221,7 @@ with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Soft()) as demo:
     with gr.Column(elem_id="hdr"):
         gr.Markdown("""
         # OpenAI gpt-oss-safeguard 20B — Ollama
-        [gpt-oss-safeguard-20b](https://huggingface.co/openai/gpt-oss-safeguard-20b) · [Prompt Guide](https://cookbook.openai.com/articles/gpt-oss-safeguard-guide) · [Chat](http://localhost:3000/ollama-chat.html) · [Safeguard HTML](http://localhost:3000/safeguard.html)
+        [gpt-oss-safeguard-20b](https://huggingface.co/openai/gpt-oss-safeguard-20b) · [Prompt Guide](https://cookbook.openai.com/articles/gpt-oss-safeguard-guide) · [Chat](https://dr.eamer.dev/io/safeguard/chat) · [Safeguard](https://dr.eamer.dev/io/safeguard/)
 
         Provide a **Policy** and a **Prompt**.
         """)

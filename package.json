@@ -1,7 +1,7 @@
 {
-  "name": "ollama-chat",
+  "name": "safeguard-ux",
   "version": "1.0.0",
-  "description": "Local chat interface for Ollama with CORS proxy",
+  "description": "Content policy evaluator and chat interface for local Ollama instances",
   "scripts": {
     "start": "node proxy-server.js"
   }

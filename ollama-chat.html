@@ -1,751 +1,528 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-font-size="md" data-reduced-motion="false">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollama Chat with Thinking</title>
-    <style>
-        /* ---- CSS Custom Properties ---- */
-        :root {
-            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            --surface: rgba(0,0,0,0.2);
-            --surface-input: rgba(0,0,0,0.4);
-            --border: rgba(255,255,255,0.1);
-            --border-subtle: rgba(255,255,255,0.05);
-            --text: #e0e0e0;
-            --text-muted: #9ca3af;
-            --text-dim: #6b7280;
-            --accent: #00d4ff;
-            --accent-2: #7c3aed;
-            --chip-bg: rgba(255,255,255,0.05);
-            --chip-border: rgba(255,255,255,0.1);
-            --placeholder-color: rgba(255,255,255,0.4);
-            --font-size-base: 15px;
-        }
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat · Safeguard · IO Suite</title>
+  <meta name="description" content="Chat interface for local Ollama models with live thinking display">
+  <link rel="stylesheet" href="/io/shared/css/io-theme.css">
+  <script src="/io/shared/js/theme.js"></script>
+  <style>
+    /* ─── Chat-specific ─── */
+    body { padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
 
-        [data-theme="light"] {
-            --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #dde8ff 100%);
-            --surface: rgba(255,255,255,0.75);
-            --surface-input: rgba(255,255,255,0.9);
-            --border: rgba(0,0,0,0.12);
-            --border-subtle: rgba(0,0,0,0.07);
-            --text: #1e1e2e;
-            --text-muted: #4b5563;
-            --text-dim: #6b7280;
-            --accent: #0369a1;
-            --accent-2: #6d28d9;
-            --chip-bg: rgba(0,0,0,0.04);
-            --chip-border: rgba(0,0,0,0.1);
-            --placeholder-color: rgba(0,0,0,0.3);
-        }
+    .sg-header {
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
 
-        [data-font-size="sm"] { --font-size-base: 13px; }
-        [data-font-size="md"] { --font-size-base: 15px; }
-        [data-font-size="lg"] { --font-size-base: 17px; }
-        [data-font-size="xl"] { --font-size-base: 20px; }
+    .sg-header-left { display: flex; align-items: center; gap: 12px; }
 
-        html { font-size: var(--font-size-base); }
+    .sg-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
 
-        [data-reduced-motion="true"] * {
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-        }
+    .sg-nav { display: flex; gap: 4px; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+    .sg-nav a {
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-1);
+      text-decoration: none;
+      transition: all var(--ease);
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    .sg-nav a:hover { border-color: var(--border-hover); color: var(--text-0); }
+    .sg-nav a.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
-        header {
-            padding: 1rem 2rem;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+    .sg-header-right { display: flex; gap: 8px; align-items: center; }
 
-        .nav-links {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
+    /* ─── Example prompts bar ─── */
+    .example-bar {
+      padding: 10px 24px;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+    }
 
-        .nav-link {
-            padding: 0.25rem 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 99px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: all 0.15s;
-        }
+    .example-bar-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
 
-        .nav-link:hover { background: var(--chip-bg); color: var(--text); }
-        .nav-link.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.3); color: var(--accent); }
+    .example-btn {
+      padding: 4px 12px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-1);
+      cursor: pointer;
+      transition: all var(--ease);
+      white-space: nowrap;
+      font-family: var(--font);
+    }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            background: linear-gradient(90deg, #00d4ff, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    .example-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .example-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        /* Settings button + panel */
-        .settings-btn {
-            background: none; border: 1px solid var(--border); border-radius: 6px;
-            color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.5rem;
-            font-size: 1rem; line-height: 1; transition: color 0.15s;
-        }
-        .settings-btn:hover { color: var(--text); }
+    /* ─── Chat area ─── */
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      scroll-behavior: smooth;
+    }
 
-        .settings-panel {
-            position: fixed; top: 3.5rem; right: 1rem; z-index: 100;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 10px; padding: 1rem; min-width: 200px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; gap: 0.85rem;
-        }
+    .message {
+      margin-bottom: 20px;
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-        .settings-section { display: flex; flex-direction: column; gap: 0.4rem; }
-        .settings-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-        .settings-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
 
-        .setting-opt {
-            padding: 0.25rem 0.65rem; border-radius: 6px;
-            border: 1px solid var(--chip-border); background: var(--chip-bg);
-            color: var(--text-muted); font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
-        }
-        .setting-opt:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-        .setting-opt.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.1); }
+    .msg-header.user { justify-content: flex-end; }
 
-        .toggle-label { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
 
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 2rem;
-            scroll-behavior: smooth;
-        }
+    .msg-avatar.user { background: var(--accent-soft); color: var(--accent); }
+    .msg-avatar.assistant { background: var(--bg-3); color: var(--text-1); }
 
-        .message {
-            margin-bottom: 1.5rem;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
+    .msg-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-2);
+    }
 
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
+    .msg-body {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      line-height: 1.65;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+    }
 
-        .message-header.user {
-            justify-content: flex-end;
-        }
+    .message.user .msg-body {
+      background: var(--accent-soft);
+      border: 1px solid rgba(79, 70, 229, 0.15);
+    }
 
-        .message-header.assistant {
-            justify-content: flex-start;
-        }
+    .message.assistant .msg-body {
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
 
-        .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
+    [data-theme="dark"] .message.user .msg-body {
+      background: rgba(129, 140, 248, 0.08);
+      border-color: rgba(129, 140, 248, 0.15);
+    }
 
-        .avatar.user {
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
-        }
+    /* ─── Thinking block ─── */
+    .thinking-block {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
 
-        .avatar.assistant {
-            background: linear-gradient(135deg, #00d4ff, #7c3aed);
-        }
+    .thinking-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-2);
+      width: 100%;
+      text-align: left;
+      font-family: var(--font);
+      transition: color var(--ease);
+    }
 
-        .name {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
+    .thinking-toggle:hover { color: var(--text-0); }
 
-        .message.user .name {
-            order: 2;
-        }
+    .thinking-arrow {
+      font-size: 0.6rem;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
 
-        .message-content {
-            padding: 1rem;
-            border-radius: 12px;
-            line-height: 1.7;
-            word-wrap: break-word;
-        }
+    .thinking-block.collapsed .thinking-arrow { transform: rotate(-90deg); }
+    .thinking-block.collapsed .thinking-body { display: none; }
 
-        .message.user .message-content {
-            background: rgba(245, 158, 11, 0.2);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
+    .thinking-body {
+      padding: 0 12px 10px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text-1);
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
 
-        .message.assistant .message-content {
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.2);
-        }
+    /* ─── Loading indicator ─── */
+    .loading-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+    }
 
-        .thinking {
-            background: rgba(124, 58, 237, 0.15);
-            border: 1px solid rgba(124, 58, 237, 0.3);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            overflow: hidden;
-        }
+    .loading-dots { display: flex; gap: 4px; }
 
-        .thinking-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            background: rgba(124, 58, 237, 0.2);
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #a78bfa;
-        }
+    .loading-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: dot-pulse 1.2s ease-in-out infinite;
+    }
 
-        .thinking-header:hover {
-            background: rgba(124, 58, 237, 0.3);
-        }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
 
-        .thinking-content {
-            padding: 0 1rem 1rem 1rem;
-            color: #c4b5fd;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
+    @keyframes dot-pulse {
+      0%, 100% { transform: scale(0.6); opacity: 0.3; }
+      50% { transform: scale(1); opacity: 1; }
+    }
 
-        .thinking-content.collapsed {
-            display: none;
-        }
+    .loading-text {
+      font-size: 0.78rem;
+      color: var(--text-2);
+    }
 
-        .thinking-icon {
-            transition: transform 0.3s ease;
-        }
+    /* ─── Input area ─── */
+    .input-area {
+      padding: 16px 24px;
+      background: var(--bg-1);
+      border-top: 1px solid var(--border);
+    }
 
-        .thinking.collapsed .thinking-icon {
-            transform: rotate(-90deg);
-        }
+    .input-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+    }
 
-        .thinking.collapsed .thinking-content {
-            display: none;
-        }
+    .input-wrap textarea {
+      width: 100%;
+      padding: 12px 80px 12px 14px;
+      min-height: 48px;
+      max-height: 180px;
+      resize: none;
+      border-radius: var(--radius);
+    }
 
-        .input-area {
-            padding: 1.5rem 2rem;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-        }
+    .send-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      padding: 6px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--ease);
+      font-family: var(--font);
+    }
 
-        .input-wrapper {
-            max-width: 800px;
-            margin: 0 auto;
-            position: relative;
-        }
+    .send-btn:hover { background: var(--accent-hover); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .thinking-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-        textarea {
-            width: 100%;
-            padding: 1rem 1rem 3rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--surface-input);
-            color: var(--text);
-            font-size: 1rem;
-            font-family: inherit;
-            resize: none;
-            min-height: 60px;
-            max-height: 200px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        textarea::placeholder {
-            color: var(--placeholder-color);
-        }
-
-        .send-button {
-            position: absolute;
-            bottom: 0.75rem;
-            right: 0.75rem;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #00d4ff, #7c3aed);
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .send-button:hover {
-            opacity: 0.9;
-        }
-
-        .send-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .clear-button {
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .clear-button:hover {
-            background: var(--chip-bg);
-            color: var(--text);
-        }
-
-        .loading {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.85rem 1.2rem;
-            border-radius: 10px;
-            background: rgba(124, 58, 237, 0.18);
-            border: 1px solid rgba(124, 58, 237, 0.3);
-            margin-left: auto;
-            margin-right: auto;
-            animation: neural-glow 1.6s ease-in-out infinite;
-        }
-
-        @keyframes neural-glow {
-            0%, 100% { box-shadow: 0 0 6px rgba(167,139,250,0.25); }
-            50% { box-shadow: 0 0 14px rgba(167,139,250,0.55); }
-        }
-
-        .neural-dots {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .neural-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #a78bfa;
-            animation: neural-pulse 1.2s ease-in-out infinite;
-        }
-
-        .neural-dot:nth-child(2) { animation-delay: 0.2s; }
-        .neural-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes neural-pulse {
-            0%, 100% { transform: scale(0.6); opacity: 0.4; }
-            50% { transform: scale(1.1); opacity: 1; }
-        }
-
-        .example-prompts {
-            padding: 1rem 2rem;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .example-prompts h3 {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        .example-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .chip {
-            padding: 0.3rem 0.75rem;
-            background: var(--chip-bg);
-            border: 1px solid var(--chip-border);
-            border-radius: 99px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .chip:hover {
-            background: rgba(255,255,255,0.1);
-            color: var(--text);
-        }
-
-        .error {
-            color: #f87171;
-            font-size: 0.875rem;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-    </style>
+    /* ─── Responsive ─── */
+    @media (max-width: 480px) {
+      .sg-header { padding: 10px 14px; }
+      .chat-scroll { padding: 16px; }
+      .input-area { padding: 12px 14px; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>🧠 Ollama Chat</h1>
-        <nav class="nav-links">
-            <a class="nav-link active" href="./ollama-chat.html">Chat</a>
-            <a class="nav-link" href="./safeguard.html">Safeguard</a>
-            <button class="settings-btn" id="settingsBtn" aria-label="Accessibility settings">&#9881;</button>
-        </nav>
-    </header>
-
-    <div class="settings-panel" id="settingsPanel" hidden>
-        <div class="settings-section">
-            <div class="settings-label">Theme</div>
-            <div class="settings-row">
-                <button class="setting-opt" data-setting="theme" data-value="dark">Dark</button>
-                <button class="setting-opt" data-setting="theme" data-value="light">Light</button>
-            </div>
-        </div>
-        <div class="settings-section">
-            <div class="settings-label">Font size</div>
-            <div class="settings-row">
-                <button class="setting-opt" data-setting="fontSize" data-value="sm">S</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="md">M</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="lg">L</button>
-                <button class="setting-opt" data-setting="fontSize" data-value="xl">XL</button>
-            </div>
-        </div>
-        <div class="settings-section">
-            <div class="settings-row">
-                <label class="toggle-label">
-                    <input type="checkbox" id="reducedMotionToggle"> Reduce motion
-                </label>
-            </div>
-        </div>
+  <header class="sg-header">
+    <div class="sg-header-left">
+      <a href="/io/" class="io-back" aria-label="Back to IO Suite">IO</a>
+      <span class="sg-title">Safeguard</span>
+      <nav class="sg-nav" aria-label="Tool navigation">
+        <a href="/io/safeguard/">Evaluate</a>
+        <a href="/io/safeguard/chat" class="active" aria-current="page">Chat</a>
+      </nav>
     </div>
-
-    <div class="example-prompts">
-        <h3>Try these prompts:</h3>
-        <div class="example-chips">
-            <span class="chip" onclick="setPrompt('Explain quantum computing simply')">Explain quantum computing</span>
-            <span class="chip" onclick="setPrompt('Write a poem about coding')">Write a poem</span>
-            <span class="chip" onclick="setPrompt('How do you think about complex problems?')">Show your thinking</span>
-            <span class="chip" onclick="setPrompt('Debug this code: function add(a, b) { return a + b; }')">Debug this code</span>
-        </div>
+    <div class="sg-header-right">
+      <button class="theme-toggle" aria-label="Toggle theme">Dark</button>
     </div>
+  </header>
 
-    <div class="chat-container" id="chatContainer"></div>
+  <div class="example-bar" role="group" aria-labelledby="example-bar-label">
+    <span class="example-bar-label" id="example-bar-label">Try:</span>
+    <button class="example-btn" onclick="setPrompt('Explain quantum computing simply')">Quantum computing</button>
+    <button class="example-btn" onclick="setPrompt('Write a poem about coding')">Write a poem</button>
+    <button class="example-btn" onclick="setPrompt('How do you think about complex problems?')">Show thinking</button>
+    <button class="example-btn" onclick="setPrompt('Debug this code: function add(a, b) { return a + b; }')">Debug code</button>
+  </div>
 
-    <div class="input-area">
-        <div class="input-wrapper">
-            <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
-            <button class="send-button" id="sendBtn">Send</button>
-        </div>
+  <div class="chat-scroll" id="chatContainer" role="log" aria-label="Chat messages"></div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="messageInput" placeholder="Type your message..." rows="1" aria-label="Message input"></textarea>
+      <button class="send-btn" id="sendBtn">Send</button>
     </div>
+  </div>
 
-    <script>
-        // Configuration
-        const config = {
-            url: 'http://localhost:3000',
-            model: 'gpt-oss-safeguard',
-            stream: true
-        };
+  <script>
+    // ── Config ──
+    const config = {
+      model: 'gpt-oss-safeguard',
+      stream: true
+    };
 
-        // State
-        let messages = [];
-        let isConnected = true;
-        let abortController = null;
+    const API_BASE = location.hostname === 'localhost'
+      ? `${location.origin}`
+      : `${location.origin}/io/safeguard`;
 
-        // DOM Elements
-        const chatContainer = document.getElementById('chatContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
+    let messages = [];
+    let abortController = null;
 
-        // Initialize
-        function init() {
-            messageInput.addEventListener('input', autoResize);
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-            sendBtn.addEventListener('click', sendMessage);
-            autoResize();
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function init() {
+      messageInput.addEventListener('input', autoResize);
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
         }
+      });
+      sendBtn.addEventListener('click', sendMessage);
+      autoResize();
+    }
 
-        function autoResize() {
-            messageInput.style.height = 'auto';
-            messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
-        }
+    function autoResize() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 180) + 'px';
+    }
 
-        function setPrompt(text) {
-            messageInput.value = text;
-            autoResize();
-            messageInput.focus();
-        }
+    function setPrompt(text) {
+      messageInput.value = text;
+      autoResize();
+      messageInput.focus();
+    }
 
-        function appendMessage(role, content, thinking = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
-            const header = document.createElement('div');
-            header.className = `message-header ${role}`;
-            header.innerHTML = `
-                <span class="avatar ${role}">${role === 'user' ? '👤' : '🤖'}</span>
-                <span class="name">${role === 'user' ? 'You' : 'Ollama'}</span>
-            `;
+    function toggleThinking(btn) {
+      const block = btn.closest('.thinking-block');
+      block.classList.toggle('collapsed');
+      btn.setAttribute('aria-expanded', String(!block.classList.contains('collapsed')));
+    }
 
-            const messageContent = document.createElement('div');
-            messageContent.className = 'message-content';
-            messageContent.textContent = content;
+    function appendMessage(role, content, thinking) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
 
-            messageDiv.appendChild(header);
+      const header = document.createElement('div');
+      header.className = `msg-header ${role}`;
+      header.innerHTML = `
+        <span class="msg-avatar ${role}" aria-hidden="true">${role === 'user' ? 'U' : 'S'}</span>
+        <span class="msg-name">${role === 'user' ? 'You' : 'Safeguard'}</span>
+      `;
+      div.appendChild(header);
 
-            if (thinking) {
-                const thinkingDiv = document.createElement('div');
-                thinkingDiv.className = 'thinking';
-                thinkingDiv.innerHTML = `
-                    <div class="thinking-header" onclick="toggleThinking(this)">
-                        <span class="thinking-icon">▼</span>
-                        <span>💭 Reasoning</span>
-                    </div>
-                    <div class="thinking-content">${escapeHtml(thinking)}</div>
-                `;
-                messageDiv.appendChild(thinkingDiv);
-            }
+      if (thinking) {
+        const tb = document.createElement('div');
+        tb.className = 'thinking-block';
+        tb.innerHTML = `
+          <button class="thinking-toggle" onclick="toggleThinking(this)" aria-expanded="true">
+            <span class="thinking-arrow" aria-hidden="true">\u25BC</span>
+            Reasoning
+          </button>
+          <div class="thinking-body">${escapeHtml(thinking)}</div>
+        `;
+        div.appendChild(tb);
+      }
 
-            messageDiv.appendChild(messageContent);
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+      body.textContent = content;
+      div.appendChild(body);
 
-        function appendLoading() {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'loading';
-            loadingDiv.className = 'message assistant';
-            loadingDiv.innerHTML = `
-                <div class="loading">
-                    <div class="neural-dots">
-                        <div class="neural-dot"></div>
-                        <div class="neural-dot"></div>
-                        <div class="neural-dot"></div>
-                    </div>
-                    <span style="font-size:0.85rem;color:#c4b5fd">Processing…</span>
-                </div>
-            `;
-            chatContainer.appendChild(loadingDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-        function removeLoading() {
-            const loading = document.getElementById('loading');
-            if (loading) loading.remove();
-        }
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+      messageInput.value = '';
+      messageInput.style.height = '48px';
 
-        function toggleThinking(header) {
-            const thinkingDiv = header.parentElement;
-            thinkingDiv.classList.toggle('collapsed');
-        }
+      messages.push({ role: 'user', content: text });
+      appendMessage('user', text);
 
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !isConnected) return;
+      // Build live response container
+      const responseDiv = document.createElement('div');
+      responseDiv.className = 'message assistant';
+      responseDiv.id = 'response';
 
-            messageInput.value = '';
-            messageInput.style.height = '60px';
-            removeLoading();
+      const rHeader = document.createElement('div');
+      rHeader.className = 'msg-header assistant';
+      rHeader.innerHTML = `
+        <span class="msg-avatar assistant" aria-hidden="true">S</span>
+        <span class="msg-name">Safeguard</span>
+      `;
+      responseDiv.appendChild(rHeader);
 
-            messages.push({ role: 'user', content: text });
-            appendMessage('user', text);
+      const liveThinking = document.createElement('div');
+      liveThinking.className = 'thinking-block';
+      liveThinking.style.display = 'none';
+      liveThinking.innerHTML = `
+        <button class="thinking-toggle" onclick="toggleThinking(this)" aria-expanded="true">
+          <span class="thinking-arrow" aria-hidden="true">\u25BC</span>
+          Reasoning
+        </button>
+        <div class="thinking-body"></div>
+      `;
+      responseDiv.appendChild(liveThinking);
 
-            const responseDiv = document.createElement('div');
-            responseDiv.className = 'message assistant';
-            responseDiv.id = 'response';
+      const rBody = document.createElement('div');
+      rBody.className = 'msg-body';
 
-            const responseHeader = document.createElement('div');
-            responseHeader.className = 'message-header assistant';
-            responseHeader.innerHTML = `
-                <span class="avatar assistant">🤖</span>
-                <span class="name">Ollama</span>
-            `;
-            responseDiv.appendChild(responseHeader);
+      // Show loading dots
+      rBody.innerHTML = `<div class="loading-indicator">
+        <div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>
+        <span class="loading-text">Thinking...</span>
+      </div>`;
+      responseDiv.appendChild(rBody);
+      chatContainer.appendChild(responseDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            // Thinking block (hidden until we get thinking tokens)
-            const liveThinkingDiv = document.createElement('div');
-            liveThinkingDiv.className = 'thinking';
-            liveThinkingDiv.style.display = 'none';
-            liveThinkingDiv.innerHTML = `
-                <div class="thinking-header" onclick="toggleThinking(this)">
-                    <span class="thinking-icon">▼</span>
-                    <span>💭 Reasoning</span>
-                </div>
-                <div class="thinking-content"></div>
-            `;
-            responseDiv.appendChild(liveThinkingDiv);
+      sendBtn.disabled = true;
+      let fullContent = '';
+      let fullThinking = '';
 
-            const responseContent = document.createElement('div');
-            responseContent.className = 'message-content';
-            responseDiv.appendChild(responseContent);
+      try {
+        abortController = new AbortController();
 
-            chatContainer.appendChild(responseDiv);
+        const response = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: config.model,
+            messages,
+            stream: config.stream,
+            options: { temperature: 0.7, num_predict: 4096 }
+          }),
+          signal: abortController.signal
+        });
 
-            let fullContent = '';
-            let fullThinking = '';
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
+        // Clear loading dots on first token
+        let firstToken = true;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const lines = decoder.decode(value).split('\n').filter(l => l.trim());
+          for (const line of lines) {
             try {
-                abortController = new AbortController();
+              const data = JSON.parse(line);
+              const content = data.message?.content || '';
+              const thinking = data.message?.thinking || '';
 
-                const response = await fetch(`${config.url}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: config.model,
-                        messages: messages,
-                        stream: config.stream,
-                        options: {
-                            temperature: 0.7,
-                            num_predict: 4096
-                        }
-                    }),
-                    signal: abortController.signal
-                });
+              if (firstToken && (content || thinking)) {
+                rBody.textContent = '';
+                firstToken = false;
+              }
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+              if (thinking) {
+                fullThinking += thinking;
+                liveThinking.style.display = '';
+                liveThinking.querySelector('.thinking-body').textContent = fullThinking;
+              }
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+              if (content) {
+                fullContent += content;
+                rBody.textContent = fullContent;
+              }
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n').filter(line => line.trim());
-
-                    for (const line of lines) {
-                        try {
-                            const data = JSON.parse(line);
-                            const content = data.message?.content || '';
-                            const thinking = data.message?.thinking || '';
-
-                            if (thinking) {
-                                fullThinking += thinking;
-                                liveThinkingDiv.style.display = '';
-                                liveThinkingDiv.querySelector('.thinking-content').textContent = fullThinking;
-                            }
-
-                            if (content) {
-                                fullContent += content;
-                                responseContent.textContent = fullContent;
-                            }
-
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                        } catch (e) {
-                            console.error('Error parsing chunk:', e);
-                        }
-                    }
-                }
-
-                messages.push({ role: 'assistant', content: fullContent });
-
-            } catch (error) {
-                removeLoading();
-                responseDiv.querySelector('.message-content').textContent = `Error: ${error.message}`;
-                if (error.name === 'AbortError') {
-                    responseDiv.querySelector('.message-content').textContent += ' (Request cancelled)';
-                }
-            } finally {
-                abortController = null;
-            }
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            } catch {}
+          }
         }
 
-        // Initialize on load
-        init();
+        messages.push({ role: 'assistant', content: fullContent });
 
-        // ---- Accessibility Settings ----
-        const SETTINGS_KEY = 'a11ySettings';
-        const defaults = { theme: 'dark', fontSize: 'md', reducedMotion: false };
-
-        function loadSettings() {
-            const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-            return { ...defaults, ...saved };
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          rBody.textContent = fullContent || '(Cancelled)';
+        } else {
+          rBody.textContent = `Error: ${error.message}`;
         }
+      } finally {
+        sendBtn.disabled = false;
+        abortController = null;
+      }
+    }
 
-        function applySettings(s) {
-            document.documentElement.dataset.theme = s.theme;
-            document.documentElement.dataset.fontSize = s.fontSize;
-            document.documentElement.dataset.reducedMotion = s.reducedMotion;
-            document.querySelectorAll('.setting-opt').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.value === s[btn.dataset.setting]);
-            });
-            document.getElementById('reducedMotionToggle').checked = s.reducedMotion;
-        }
-
-        function saveSettings(s) {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-        }
-
-        let settings = loadSettings();
-        applySettings(settings);
-
-        document.getElementById('settingsBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const panel = document.getElementById('settingsPanel');
-            panel.hidden = !panel.hidden;
-        });
-
-        document.addEventListener('click', () => {
-            document.getElementById('settingsPanel').hidden = true;
-        });
-
-        document.getElementById('settingsPanel').addEventListener('click', e => e.stopPropagation());
-
-        document.querySelectorAll('.setting-opt').forEach(btn => {
-            btn.addEventListener('click', () => {
-                settings[btn.dataset.setting] = btn.dataset.value;
-                saveSettings(settings);
-                applySettings(settings);
-            });
-        });
-
-        document.getElementById('reducedMotionToggle').addEventListener('change', (e) => {
-            settings.reducedMotion = e.target.checked;
-            saveSettings(settings);
-            applySettings(settings);
-        });
-    </script>
+    init();
+  </script>
 </body>
 </html>
