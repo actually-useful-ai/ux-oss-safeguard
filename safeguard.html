@@ -97,13 +97,12 @@
       display: grid; grid-template-columns: 1fr 2fr; gap: 16px; align-items: start;
     }
 
-    /* ─── Example selector (dropdown) ─── */
-    .sg-tabs { display: flex; flex-direction: column; gap: 6px; }
-    .sg-examples-row { display: flex; align-items: center; gap: 10px; }
+    /* ─── Example selector (dropdowns) ─── */
+    .sg-examples-row { display: flex; align-items: center; gap: 8px; }
     .sg-cat-select {
       padding: 4px 22px 4px 9px;
       border: 1px solid var(--border); border-radius: var(--radius-sm);
-      background: var(--bg-2); color: var(--text-1);
+      background: var(--bg-2); color: var(--text-0);
       font-size: 0.72rem; font-weight: 500; font-family: var(--font);
       cursor: pointer; transition: all var(--ease);
       appearance: none; -webkit-appearance: none;
@@ -113,18 +112,12 @@
     }
     .sg-cat-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
     .sg-cat-select:hover { border-color: var(--border-hover); color: var(--text-0); }
-    .sg-tab-panel { display: flex; gap: 6px; flex-wrap: wrap; }
-    .sg-chip {
-      padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-      background: var(--bg-1); color: var(--text-1); font-size: 0.78rem; font-weight: 500;
-      font-family: var(--font); cursor: pointer; transition: all var(--ease);
+    .sg-scenario-select {
+      flex: 1; min-width: 0; max-width: 260px;
     }
-    .sg-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-    .sg-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .sg-chip:active { transform: scale(0.97); }
 
     .sg-section-label {
-      font-size: 0.72rem; font-weight: 700; color: var(--text-2);
+      font-size: 0.72rem; font-weight: 700; color: var(--text-0);
       text-transform: uppercase; letter-spacing: 0.05em;
       display: flex; align-items: center; gap: 6px;
     }
@@ -132,7 +125,7 @@
     /* ─── Policy (collapsed by default) ─── */
     .sg-policy-wrap summary {
       cursor: pointer; list-style: none;
-      font-size: 0.72rem; font-weight: 700; color: var(--text-2);
+      font-size: 0.72rem; font-weight: 700; color: var(--text-0);
       text-transform: uppercase; letter-spacing: 0.05em;
       padding: 0; display: flex; align-items: center; gap: 5px; user-select: none;
     }
@@ -144,8 +137,9 @@
       text-transform: none; letter-spacing: 0; margin-left: 4px;
     }
     .sg-policy-wrap .sg-policy-actions {
-      margin-left: auto; display: flex; gap: 4px; text-transform: none; letter-spacing: 0;
+      margin-left: auto; display: none; gap: 4px; text-transform: none; letter-spacing: 0;
     }
+    .sg-policy-wrap[open] .sg-policy-actions { display: flex; }
     .sg-policy-toggle {
       background: none; border: 1px solid var(--border); border-radius: 3px;
       color: var(--text-2); font-size: 0.64rem; font-weight: 600; font-family: var(--font);
@@ -360,8 +354,6 @@
     @media (max-width: 700px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
       .sg-bar { padding: 10px 12px; }
-      .sg-chip { padding: 4px 9px; font-size: 0.7rem; }
-      .sg-tab-panel { gap: 5px; }
       .sg-examples-row { gap: 8px; }
       .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
       .sg-sliders { grid-template-columns: 1fr 1fr; }
@@ -418,20 +410,18 @@
 
   <main class="sg-body">
     <!-- Example selector -->
-    <div class="sg-tabs">
-      <div class="sg-examples-row">
-        <label class="sg-section-label" for="catSelect">Try an example</label>
-        <select class="sg-cat-select" id="catSelect" aria-label="Example category">
-          <option value="spam">Spam</option>
-          <option value="violence">Violence</option>
-          <option value="hate">Hate Speech</option>
-          <option value="fraud">Fraud</option>
-          <option value="harm">Self-Harm</option>
-          <option value="military">Military</option>
-          <option value="legit">Legitimate</option>
-        </select>
-      </div>
-      <div class="sg-tab-panel" id="tabPanel" aria-label="Example prompts"></div>
+    <div class="sg-examples-row">
+      <label class="sg-section-label" for="catSelect">Try an example</label>
+      <select class="sg-cat-select" id="catSelect" aria-label="Example category">
+        <option value="spam">Spam</option>
+        <option value="violence">Violence</option>
+        <option value="hate">Hate Speech</option>
+        <option value="fraud">Fraud</option>
+        <option value="harm">Self-Harm</option>
+        <option value="military" selected>Military</option>
+        <option value="legit">Legitimate</option>
+      </select>
+      <select class="sg-cat-select sg-scenario-select" id="scenarioSelect" aria-label="Example scenario"></select>
     </div>
 
     <!-- Policy (collapsed by default) -->
@@ -602,7 +592,7 @@
     const analysisSignal = document.getElementById('analysisSignal');
     const verdictSignal = document.getElementById('verdictSignal');
     const resultsRow = document.getElementById('resultsRow');
-    const tabPanel = document.getElementById('tabPanel');
+    const scenarioSelect = document.getElementById('scenarioSelect');
     const catSelect = document.getElementById('catSelect');
     const catViz = document.getElementById('catViz');
 
@@ -666,7 +656,7 @@
       if (!text) return null;
       const hasEscalate = /escalate/i.test(text);
       // Match patterns like D-SP4 or D-SP4.a or R-VH3
-      const m = text.match(/([DR])-(SP|VH|HS|SH|SC|FD|WD|HR)(\d)(\.\w+)?/i);
+      const m = text.match(/([DR])-(SP|VH|HS|SH|SC|FD|WD|HR|MU)(\d)(\.\w+)?/i);
       if (m) {
         const dir = m[1].toUpperCase() === 'D' ? 'Depiction' : 'Request';
         const catCode = m[2].toUpperCase();
@@ -954,7 +944,7 @@
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       for (let i = lines.length - 1; i >= Math.max(0, lines.length - 5); i--) {
         const up = lines[i].toUpperCase();
-        if (up.match(/[DR]-(SP|VH|HS|SH|SC|FD|WD|HR)\d/) || up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) {
+        if (up.match(/[DR]-(SP|VH|HS|SH|SC|FD|WD|HR|MU)\d/) || up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) {
           return lines.slice(i).join('\n');
         }
       }
@@ -1099,20 +1089,27 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
       ],
     };
 
-    // ── Category select ──
-    function renderChips(cat) {
-      tabPanel.innerHTML = '';
+    // ── Category + scenario selects ──
+    function updateScenarioSelect(cat) {
+      scenarioSelect.innerHTML = '';
       const items = EXAMPLES[cat] || [];
       items.forEach((ex, i) => {
-        const chip = document.createElement('button');
-        chip.className = 'sg-chip';
-        chip.textContent = ex.name;
-        chip.addEventListener('click', () => loadExample(cat, i));
-        tabPanel.appendChild(chip);
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = ex.name;
+        scenarioSelect.appendChild(opt);
       });
     }
 
-    catSelect.addEventListener('change', () => renderChips(catSelect.value));
+    catSelect.addEventListener('change', () => {
+      updateScenarioSelect(catSelect.value);
+    });
+
+    scenarioSelect.addEventListener('change', () => {
+      const cat = catSelect.value;
+      const idx = parseInt(scenarioSelect.value, 10);
+      loadExample(cat, idx);
+    });
 
     function loadExample(cat, idx) {
       const ex = EXAMPLES[cat][idx];
@@ -1126,7 +1123,7 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
     // ── Init ──
     policyInput.value = SAFETY_POLICY;
     setPolicyMode('preview'); // render markdown on load
-    renderChips('spam');
+    updateScenarioSelect('military');
   </script>
 </body>
 </html>
