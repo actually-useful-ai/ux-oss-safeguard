@@ -7,13 +7,13 @@
   <title>Safeguard · IO Suite</title>
   <meta name="description" content="Classify content against custom safety policies using OpenAI's gpt-oss-safeguard-20b">
   <meta property="og:title" content="OpenAI OSS-Safeguard">
-  <meta property="og:description" content="Classify content against safety policies. Paste a message, get a verdict: PASS, FAIL, or ESCALATE.">
+  <meta property="og:description" content="Classify content against safety policies. Paste a message, get a classification code.">
   <meta property="og:image" content="https://dr.eamer.dev/io/safeguard/screenshots/safeguard-og-share.png">
   <meta property="og:url" content="https://dr.eamer.dev/io/safeguard/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="OpenAI OSS-Safeguard">
-  <meta name="twitter:description" content="Classify content against safety policies. Paste a message, get a verdict: PASS, FAIL, or ESCALATE.">
+  <meta name="twitter:description" content="Classify content against safety policies. Paste a message, get a classification code.">
   <meta name="twitter:image" content="https://dr.eamer.dev/io/safeguard/screenshots/safeguard-og-share.png">
   <link rel="stylesheet" href="/io/shared/css/io-theme.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -97,27 +97,22 @@
       display: grid; grid-template-columns: 1fr 2fr; gap: 16px; align-items: start;
     }
 
-    /* ─── Tabbed examples ─── */
+    /* ─── Example selector (dropdown) ─── */
     .sg-tabs { display: flex; flex-direction: column; gap: 6px; }
-    .sg-tab-bar {
-      display: flex; gap: 6px; flex-wrap: nowrap;
-      overflow-x: auto; -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; -ms-overflow-style: none;
+    .sg-examples-row { display: flex; align-items: center; gap: 10px; }
+    .sg-cat-select {
+      padding: 4px 26px 4px 10px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg-2); color: var(--text-1);
+      font-size: 0.78rem; font-weight: 500; font-family: var(--font);
+      cursor: pointer; transition: all var(--ease);
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
     }
-    .sg-tab-bar::-webkit-scrollbar { display: none; }
-    .sg-tab-bar[role="tablist"] { margin: 0; padding: 0; }
-    .sg-tab {
-      padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px;
-      background: var(--bg-1); color: var(--text-2); font-size: 0.72rem; font-weight: 600;
-      font-family: var(--font); cursor: pointer; transition: all var(--ease);
-      letter-spacing: 0.02em; white-space: nowrap;
-    }
-    .sg-tab:hover { color: var(--text-0); border-color: var(--border-hover); }
-    .sg-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .sg-tab.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-    .sg-tab-panel {
-      display: flex; gap: 6px; flex-wrap: wrap;
-    }
+    .sg-cat-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+    .sg-cat-select:hover { border-color: var(--border-hover); color: var(--text-0); }
+    .sg-tab-panel { display: flex; gap: 6px; flex-wrap: wrap; }
     .sg-chip {
       padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
       background: var(--bg-1); color: var(--text-1); font-size: 0.78rem; font-weight: 500;
@@ -154,7 +149,6 @@
 
     /* ─── Prompt ─── */
     .sg-prompt-area textarea { font-size: 0.84rem; min-height: 72px; max-width: 100%; }
-    /* Prevent iOS zoom on input focus */
     @supports (-webkit-touch-callout: none) {
       textarea, input[type="range"] { font-size: 16px !important; }
     }
@@ -183,7 +177,7 @@
     /* ─── Divider ─── */
     .sg-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 
-    /* ─── Verdict ─── */
+    /* ─── Signal dot ─── */
     .sg-signal { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
     .sg-signal.active { background: var(--accent); animation: pulse-signal 1.4s ease-in-out infinite; }
     .sg-signal.done { background: var(--green); }
@@ -193,35 +187,84 @@
     .sg-verdict-col { display: flex; flex-direction: column; gap: 6px; }
     .sg-reasoning-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
+    /* ─── Verdict box ─── */
     .sg-verdict-box {
       position: relative;
       font-family: 'DM Mono', var(--mono); font-size: 1.2rem; font-weight: 500;
-      letter-spacing: 0.03em; padding: 16px 20px; border: 2px solid var(--border);
+      letter-spacing: 0.03em; padding: 14px 16px; border: 2px solid var(--border);
       border-radius: var(--radius); background: var(--bg-1); color: var(--text-0);
-      text-transform: uppercase; transition: all 0.25s ease; min-height: 100%;
-      display: flex; flex-direction: column; justify-content: center; gap: 8px;
+      transition: all 0.25s ease;
+      display: flex; flex-direction: column; gap: 6px;
     }
-    .sg-verdict-box.pass { border-color: #22c55e; background: rgba(34,197,94,0.06); color: #16a34a; }
-    [data-theme="dark"] .sg-verdict-box.pass { color: #4ade80; }
-    .sg-verdict-box.fail { border-color: #ef4444; background: rgba(239,68,68,0.06); color: #dc2626; }
-    [data-theme="dark"] .sg-verdict-box.fail { color: #f87171; }
-    .sg-verdict-box.escalate { border-color: #f59e0b; background: rgba(245,158,11,0.06); color: #d97706; }
-    [data-theme="dark"] .sg-verdict-box.escalate { color: #fbbf24; }
+    .sg-verdict-box.sev0 { border-color: #22c55e; background: rgba(34,197,94,0.05); color: #16a34a; }
+    [data-theme="dark"] .sg-verdict-box.sev0 { color: #4ade80; }
+    .sg-verdict-box.sev2 { border-color: #eab308; background: rgba(234,179,8,0.05); color: #ca8a04; }
+    [data-theme="dark"] .sg-verdict-box.sev2 { color: #fde047; }
+    .sg-verdict-box.sev3 { border-color: #f97316; background: rgba(249,115,22,0.05); color: #ea580c; }
+    [data-theme="dark"] .sg-verdict-box.sev3 { color: #fb923c; }
+    .sg-verdict-box.sev4 { border-color: #ef4444; background: rgba(239,68,68,0.05); color: #dc2626; }
+    [data-theme="dark"] .sg-verdict-box.sev4 { color: #f87171; }
+    .sg-verdict-box.sev4.escalate { border-color: #b91c1c; animation: escalate-pulse 2s ease-in-out infinite; }
+    @keyframes escalate-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 0 5px rgba(239,68,68,0.12); } }
     .sg-verdict-box.streaming { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-    .sg-verdict-box.streaming::after { content: '\2588'; animation: blink-cursor 0.75s step-end infinite; color: var(--accent); margin-left: 2px; }
-    @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
     .sg-verdict-placeholder { color: var(--text-2); font-style: italic; font-family: var(--font); font-size: 0.84rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
 
-    .sg-verdict-label {
-      font-family: 'DM Mono', var(--mono); font-size: 1.6rem; font-weight: 700;
+    .sg-verdict-dir {
+      font-family: var(--font); font-size: 0.64rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: currentColor; opacity: 0.65;
+      line-height: 1;
+    }
+    .sg-verdict-code {
+      font-family: 'DM Mono', var(--mono); font-size: 1.5rem; font-weight: 700;
       letter-spacing: 0.06em; line-height: 1.1;
     }
     .sg-verdict-detail {
-      font-family: var(--font); font-size: 0.75rem; font-weight: 500;
+      font-family: var(--font); font-size: 0.72rem; font-weight: 500;
       text-transform: none; letter-spacing: 0; color: var(--text-1);
-      line-height: 1.4; border-top: 1px solid var(--border); padding-top: 8px;
+      line-height: 1.4; border-top: 1px solid var(--border); padding-top: 6px;
+      margin-top: 2px;
     }
+    .sg-verdict-escalate {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: var(--font); font-size: 0.64rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      background: rgba(239,68,68,0.12); color: #dc2626; border-radius: 3px;
+      padding: 2px 6px; margin-top: 2px; align-self: flex-start;
+    }
+    [data-theme="dark"] .sg-verdict-escalate { color: #f87171; background: rgba(239,68,68,0.18); }
+
+    /* ─── Category severity visualization ─── */
+    .sg-cat-viz {
+      display: none; flex-direction: column; gap: 3px;
+      padding: 10px 12px; background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .sg-cat-viz.visible { display: flex; }
+    .sg-cat-row {
+      display: flex; align-items: center; gap: 7px;
+    }
+    .sg-cat-code {
+      font-family: 'DM Mono', var(--mono); font-size: 0.6rem;
+      color: var(--text-2); width: 22px; flex-shrink: 0; letter-spacing: 0.04em;
+    }
+    .sg-cat-bar-track {
+      flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .sg-cat-bar-fill {
+      height: 100%; border-radius: 2px; width: 0;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background-color 0.3s;
+    }
+    .sg-cat-bar-fill.sev0 { background: #22c55e; width: 8%; }
+    .sg-cat-bar-fill.sev2 { background: #eab308; width: 50%; }
+    .sg-cat-bar-fill.sev3 { background: #f97316; width: 75%; }
+    .sg-cat-bar-fill.sev4 { background: #ef4444; width: 100%; }
+    .sg-cat-name {
+      font-family: var(--font); font-size: 0.58rem; color: var(--text-2);
+      width: 60px; flex-shrink: 0; text-align: right;
+    }
+    .sg-cat-row.active .sg-cat-code { color: var(--text-0); }
+    .sg-cat-row.active .sg-cat-name { color: var(--text-1); }
 
     /* ─── Reasoning ─── */
     .sg-reasoning-box {
@@ -251,21 +294,16 @@
     .sg-slider-label label { font-size: 0.68rem; font-weight: 600; color: var(--text-2); margin: 0; }
     .sg-slider-group input[type=range] { width: 100%; accent-color: var(--accent); }
 
-    /* ─── Onload hint ─── */
-    .sg-hint {
-      font-size: 0.82rem; color: var(--text-2); text-align: center;
-      padding: 16px; font-style: italic;
-    }
+    @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
     @media (max-width: 700px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
       .sg-bar { padding: 10px 12px; }
-      .sg-tab { padding: 3px 10px; font-size: 0.68rem; }
       .sg-chip { padding: 4px 10px; font-size: 0.72rem; }
       .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
       .sg-sliders { grid-template-columns: 1fr; }
-      .sg-verdict-box { font-size: 1rem; padding: 14px; }
-      .sg-verdict-label { font-size: 1.3rem; }
+      .sg-verdict-box { padding: 12px 14px; }
+      .sg-verdict-code { font-size: 1.3rem; }
       .sg-reasoning-box { font-size: 0.78rem; padding: 12px; max-height: 50vh; overflow-y: auto; }
       .sg-popover { right: -8px; width: calc(100vw - 24px); max-width: 260px; }
       .sg-evaluate { padding: 13px 20px; font-size: 0.92rem; }
@@ -277,8 +315,8 @@
       .sg-body { padding: 12px 10px 32px; gap: 12px; }
       .sg-bar { padding: 6px 10px; }
       .sg-brand { font-size: 0.92rem; }
-      .sg-verdict-label { font-size: 1.1rem; }
-      .sg-verdict-detail { font-size: 0.7rem; }
+      .sg-verdict-code { font-size: 1.1rem; }
+      .sg-verdict-detail { font-size: 0.68rem; }
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -307,22 +345,24 @@
   </header>
 
   <main class="sg-body">
-    <!-- Tabbed examples -->
+    <!-- Example selector -->
     <div class="sg-tabs">
-      <div class="sg-section-label" style="margin-bottom: 2px;">Try an example</div>
-      <div class="sg-tab-bar" role="tablist" aria-label="Example categories">
-        <button class="sg-tab active" role="tab" aria-selected="true" data-cat="spam">Spam</button>
-        <button class="sg-tab" role="tab" aria-selected="false" data-cat="violence">Violence</button>
-        <button class="sg-tab" role="tab" aria-selected="false" data-cat="hate">Hate</button>
-        <button class="sg-tab" role="tab" aria-selected="false" data-cat="fraud">Fraud</button>
-        <button class="sg-tab" role="tab" aria-selected="false" data-cat="harm">Self-Harm</button>
-        <button class="sg-tab" role="tab" aria-selected="false" data-cat="legit">Legitimate</button>
+      <div class="sg-examples-row">
+        <label class="sg-section-label" for="catSelect">Try an example</label>
+        <select class="sg-cat-select" id="catSelect" aria-label="Example category">
+          <option value="spam">Spam</option>
+          <option value="violence">Violence</option>
+          <option value="hate">Hate Speech</option>
+          <option value="fraud">Fraud</option>
+          <option value="harm">Self-Harm</option>
+          <option value="legit">Legitimate</option>
+        </select>
       </div>
-      <div class="sg-tab-panel" id="tabPanel" role="tabpanel" aria-label="Example prompts"></div>
+      <div class="sg-tab-panel" id="tabPanel" aria-label="Example prompts"></div>
     </div>
 
-    <!-- Policy (collapsed, pre-loaded) -->
-    <details class="sg-policy-wrap" open>
+    <!-- Policy (collapsed by default) -->
+    <details class="sg-policy-wrap">
       <summary>Policy <span class="sg-policy-hint">(content safety policy loaded)</span></summary>
       <textarea id="policyInput" placeholder="Classification rules and severity levels..."></textarea>
     </details>
@@ -339,16 +379,18 @@
 
     <hr class="sg-divider">
 
-    <!-- Results: verdict (1/3) + reasoning (2/3) -->
+    <!-- Results: verdict col (1/3) + reasoning (2/3) -->
     <div class="sg-results-row" id="resultsRow">
       <div class="sg-verdict-col">
         <div class="sg-section-label">
           <span class="sg-signal" id="verdictSignal" role="img" aria-label="Verdict: idle"></span>
-          Verdict
+          Classification
         </div>
-        <div class="sg-verdict-box" id="verdictOut" role="status" aria-live="polite" aria-label="Classification verdict" tabindex="0">
+        <div class="sg-verdict-box" id="verdictOut" role="status" aria-live="polite" aria-label="Classification result" tabindex="0">
           <span class="sg-verdict-placeholder">Pick an example above or paste your own content to classify</span>
         </div>
+        <!-- Category severity visualization -->
+        <div class="sg-cat-viz" id="catViz" aria-hidden="true"></div>
       </div>
       <div class="sg-reasoning-col">
         <div class="sg-section-label">
@@ -399,14 +441,23 @@
     const verdictSignal = document.getElementById('verdictSignal');
     const resultsRow = document.getElementById('resultsRow');
     const tabPanel = document.getElementById('tabPanel');
+    const catSelect = document.getElementById('catSelect');
+    const catViz = document.getElementById('catViz');
 
-    let abortCtrl = null, startTime = null, timerInterval = null, activeTab = 'spam';
+    let abortCtrl = null, startTime = null, timerInterval = null;
 
-    // ── Verdict code decoder ──
+    // ── Classification code tables ──
     const CATEGORY_NAMES = {
       SP: 'Spam', VH: 'Violence & Harm', HS: 'Hate Speech', SH: 'Self-Harm',
       SC: 'Sexual Content', FD: 'Fraud & Deception', WD: 'Weapons & Dangerous Materials', HR: 'Harassment',
     };
+
+    const CATEGORY_SHORT = {
+      SP: 'Spam', VH: 'Violence', HS: 'Hate Speech', SH: 'Self-Harm',
+      SC: 'Sexual', FD: 'Fraud', WD: 'Weapons', HR: 'Harassment',
+    };
+
+    const ALL_CATS = ['SP', 'VH', 'HS', 'SH', 'SC', 'FD', 'WD', 'HR'];
 
     const DECODE_MAP = {
       SP0: { label: 'Not Spam', desc: 'Legitimate content' },
@@ -443,41 +494,70 @@
       HR4: { label: 'Extreme Harassment', desc: 'Stalking, threats, or coordinated abuse' },
     };
 
-    function mapVerdict(text) {
-      const up = text.toUpperCase();
-      if (up.includes('ESCALATE')) return 'escalate';
-      const codeMatch = up.match(/(SP|VH|HS|SH|SC|FD|WD|HR)(\d)/);
-      if (codeMatch) {
-        const severity = parseInt(codeMatch[2]);
-        if (severity === 0) return 'pass';
-        return 'fail';
+    // ── Parse a classification code from raw model output ──
+    function parseSeverityCode(text) {
+      if (!text) return null;
+      const hasEscalate = /escalate/i.test(text);
+      // Match patterns like D-SP4 or D-SP4.a or R-VH3
+      const m = text.match(/([DR])-(SP|VH|HS|SH|SC|FD|WD|HR)(\d)(\.\w+)?/i);
+      if (m) {
+        const dir = m[1].toUpperCase() === 'D' ? 'Depiction' : 'Request';
+        const catCode = m[2].toUpperCase();
+        const sev = parseInt(m[3]);
+        const subcode = m[4] ? m[4].toUpperCase() : '';
+        const key = catCode + m[3];
+        const info = DECODE_MAP[key] || {};
+        const catName = CATEGORY_NAMES[catCode] || catCode;
+        const rawCode = (m[1] + '-' + catCode + m[3] + subcode).toUpperCase();
+        return { dir, catCode, sev, info, catName, rawCode, hasEscalate };
       }
-      if (up.includes('INVALID')) return 'fail';
-      if (up.includes('VALID')) return 'pass';
+      // Fallback: VALID/INVALID without a code
+      const up = text.toUpperCase();
+      if (up.includes('INVALID') || up.includes('VALID')) {
+        const isValid = up.includes('VALID') && !up.includes('INVALID');
+        return { dir: null, catCode: null, sev: isValid ? 0 : 3, info: {}, catName: null, rawCode: isValid ? 'VALID' : 'INVALID', hasEscalate };
+      }
       return null;
     }
 
-    function decodeVerdict(text) {
-      const up = text.toUpperCase();
-      const parts = [];
-      const codeMatch = up.match(/([DR])-(SP|VH|HS|SH|SC|FD|WD|HR)(\d)/);
-      if (codeMatch) {
-        const key = codeMatch[2] + codeMatch[3];
-        const info = DECODE_MAP[key];
-        if (info) parts.push(info.label);
-        const catName = CATEGORY_NAMES[codeMatch[2]];
-        if (catName) parts.push(catName);
-        // Include raw code reference (with or without sub-code)
-        const rawMatch = text.match(/[DR]-[A-Z]{2}\d(?:\.\w+)?/i);
-        if (rawMatch) parts.push(rawMatch[0]);
-      } else {
-        // Simple verdict without codes
-        if (up.includes('ESCALATE')) parts.push('Flagged for human review');
-        else if (up.includes('INVALID')) parts.push('Content violates the policy');
-        else if (up.includes('VALID')) parts.push('Content is within policy');
+    // ── Render 8-category severity bar chart ──
+    function renderCatViz(parsed) {
+      if (!parsed || !parsed.catCode) {
+        catViz.classList.remove('visible');
+        catViz.innerHTML = '';
+        return;
       }
-      if (codeMatch && up.includes('ESCALATE')) parts.push('Flagged for review');
-      return parts.join(' \u00b7 ') || null;
+      catViz.classList.add('visible');
+      catViz.innerHTML = ALL_CATS.map(code => {
+        const isActive = code === parsed.catCode;
+        const sev = isActive ? parsed.sev : 0;
+        const sevCls = isActive ? `sev${sev}` : '';
+        return `<div class="sg-cat-row${isActive ? ' active' : ''}">
+          <span class="sg-cat-code">${code}</span>
+          <div class="sg-cat-bar-track"><div class="sg-cat-bar-fill${sevCls ? ' ' + sevCls : ''}"></div></div>
+          <span class="sg-cat-name">${CATEGORY_SHORT[code] || code}</span>
+        </div>`;
+      }).join('');
+      // Animate bars after insert (force reflow)
+      requestAnimationFrame(() => {
+        catViz.querySelectorAll('.sg-cat-bar-fill').forEach(el => {
+          // Already has width from class, re-trigger transition
+          el.style.transition = 'none';
+          el.style.width = '0';
+          requestAnimationFrame(() => {
+            el.style.transition = '';
+            el.style.width = '';
+          });
+        });
+      });
+    }
+
+    // ── Apply severity class to verdict box ──
+    function applySeverityClass(parsed) {
+      verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
+      if (!parsed) return;
+      verdictOut.classList.add(`sev${parsed.sev}`);
+      if (parsed.hasEscalate) verdictOut.classList.add('escalate');
     }
 
     // ── A11y ──
@@ -511,7 +591,7 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && popover.classList.contains('open')) { popover.classList.remove('open'); settingsBtn.setAttribute('aria-expanded', 'false'); settingsBtn.focus(); }});
 
     // ── Timer ──
-    function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { metaOut.textContent = `${MODEL} \u00b7 ${((Date.now() - startTime) / 1000).toFixed(1)}s`; }, 100); }
+    function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { metaOut.textContent = `${MODEL} · ${((Date.now() - startTime) / 1000).toFixed(1)}s`; }, 100); }
     function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
 
     // ── Generate ──
@@ -530,7 +610,9 @@
 
       setOutput(verdictOut, null, false, 'verdict');
       setOutput(analysisOut, null, false, 'reasoning');
-      verdictOut.classList.remove('pass', 'fail', 'escalate');
+      verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
+      catViz.classList.remove('visible');
+      catViz.innerHTML = '';
       setSignal(verdictSignal, '', 'Verdict');
       setSignal(analysisSignal, 'active', 'Reasoning');
       metaOut.textContent = '';
@@ -576,7 +658,8 @@
                   setSignal(analysisSignal, 'done', 'Reasoning');
                   setSignal(verdictSignal, 'active', 'Verdict');
                   setOutput(verdictOut, buffer, true, 'verdict');
-                  applyVerdictColor(buffer);
+                  const parsed = parseSeverityCode(buffer);
+                  applySeverityClass(parsed);
                 } else {
                   const idx = buffer.search(SPLIT_RE);
                   if (idx !== -1 && !splitFound) {
@@ -587,7 +670,8 @@
                     setOutput(verdictOut, buffer.slice(idx + SPLIT_TOKEN.length).trim() || null, true, 'verdict');
                   } else if (splitFound) {
                     const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
-                    setOutput(verdictOut, v, true, 'verdict'); applyVerdictColor(v);
+                    setOutput(verdictOut, v, true, 'verdict');
+                    applySeverityClass(parseSeverityCode(v));
                   } else {
                     setOutput(analysisOut, buffer.replace(/^analysis\s*/i, ''), true, 'reasoning');
                   }
@@ -600,19 +684,35 @@
         // Final
         if (hasThinking) {
           setOutput(analysisOut, thinkingBuf.trim(), false, 'reasoning'); setSignal(analysisSignal, 'done', 'Reasoning');
-          if (buffer.trim()) { setOutput(verdictOut, buffer.trim(), false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(buffer.trim()); }
+          if (buffer.trim()) {
+            const parsed = parseSeverityCode(buffer.trim());
+            setOutput(verdictOut, buffer.trim(), false, 'verdict');
+            setSignal(verdictSignal, 'done', 'Verdict');
+            applySeverityClass(parsed);
+            renderCatViz(parsed);
+          }
         } else if (splitFound) {
           const v = buffer.slice(buffer.search(SPLIT_RE) + SPLIT_TOKEN.length).trim();
-          setOutput(verdictOut, v, false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(v);
+          const parsed = parseSeverityCode(v);
+          setOutput(verdictOut, v, false, 'verdict');
+          setSignal(verdictSignal, 'done', 'Verdict');
+          applySeverityClass(parsed);
+          renderCatViz(parsed);
         } else {
           const text = buffer.replace(/^analysis\s*/i, '').trim();
           setOutput(analysisOut, text, false, 'reasoning'); setSignal(analysisSignal, 'done', 'Reasoning');
           const ex = extractVerdict(text);
-          if (ex) { setOutput(verdictOut, ex, false, 'verdict'); setSignal(verdictSignal, 'done', 'Verdict'); applyVerdictColor(ex); }
+          if (ex) {
+            const parsed = parseSeverityCode(ex);
+            setOutput(verdictOut, ex, false, 'verdict');
+            setSignal(verdictSignal, 'done', 'Verdict');
+            applySeverityClass(parsed);
+            renderCatViz(parsed);
+          }
         }
 
         stopTimer();
-        metaOut.textContent = `${MODEL} \u00b7 ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+        metaOut.textContent = `${MODEL} · ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
       } catch (err) {
         stopTimer();
         if (err.name !== 'AbortError') { setOutput(analysisOut, `Error: ${err.message}`, false, 'reasoning'); setSignal(analysisSignal, 'error', 'Reasoning'); }
@@ -628,23 +728,49 @@
         return;
       }
       if (type === 'verdict') {
-        const verdict = mapVerdict(text);
-        const decoded = decodeVerdict(text);
+        const parsed = parseSeverityCode(text);
         el.innerHTML = '';
-        if (verdict) {
-          const label = document.createElement('span');
-          label.className = 'sg-verdict-label';
-          label.textContent = verdict.toUpperCase();
-          el.appendChild(label);
+        if (parsed && parsed.catCode) {
+          // Direction tag
+          const dir = document.createElement('div');
+          dir.className = 'sg-verdict-dir';
+          dir.textContent = `${parsed.dir} · ${parsed.catName}`;
+          el.appendChild(dir);
+          // Primary code
+          const code = document.createElement('span');
+          code.className = 'sg-verdict-code';
+          code.textContent = parsed.rawCode;
+          el.appendChild(code);
+          // Decoded detail
+          if (parsed.info.label || parsed.info.desc) {
+            const detail = document.createElement('span');
+            detail.className = 'sg-verdict-detail';
+            const parts = [parsed.info.label, parsed.info.desc].filter(Boolean);
+            detail.textContent = parts.join(' · ');
+            el.appendChild(detail);
+          }
+          // Escalate badge
+          if (parsed.hasEscalate) {
+            const esc = document.createElement('span');
+            esc.className = 'sg-verdict-escalate';
+            esc.textContent = '⚠ Escalate for review';
+            el.appendChild(esc);
+          }
+        } else if (parsed) {
+          // VALID / INVALID fallback
+          const code = document.createElement('span');
+          code.className = 'sg-verdict-code';
+          code.textContent = parsed.rawCode;
+          el.appendChild(code);
+          if (parsed.hasEscalate) {
+            const esc = document.createElement('span');
+            esc.className = 'sg-verdict-escalate';
+            esc.textContent = '⚠ Escalate for review';
+            el.appendChild(esc);
+          }
         } else {
-          // Still streaming, show raw text
+          // Still streaming raw text before code appears
           el.appendChild(document.createTextNode(text));
-        }
-        if (decoded) {
-          const detail = document.createElement('span');
-          detail.className = 'sg-verdict-detail';
-          detail.textContent = decoded;
-          el.appendChild(detail);
         }
       } else {
         el.textContent = text;
@@ -661,26 +787,21 @@
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       for (let i = lines.length - 1; i >= Math.max(0, lines.length - 5); i--) {
         const up = lines[i].toUpperCase();
-        if (up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) return lines.slice(i).join('\n');
+        if (up.match(/[DR]-(SP|VH|HS|SH|SC|FD|WD|HR)\d/) || up.includes('INVALID') || up.includes('VALID') || up.includes('ESCALATE')) {
+          return lines.slice(i).join('\n');
+        }
       }
       return null;
-    }
-
-    function applyVerdictColor(text) {
-      verdictOut.classList.remove('pass', 'fail', 'escalate');
-      const verdict = mapVerdict(text);
-      if (verdict) verdictOut.classList.add(verdict);
     }
 
     clearBtn.addEventListener('click', () => {
       promptInput.value = '';
       setOutput(verdictOut, null, false, 'verdict'); setOutput(analysisOut, null, false, 'reasoning');
-      verdictOut.classList.remove('pass', 'fail', 'escalate');
+      verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
+      catViz.classList.remove('visible'); catViz.innerHTML = '';
       setSignal(analysisSignal, '', 'Reasoning'); setSignal(verdictSignal, '', 'Verdict');
       metaOut.textContent = ''; stopTimer();
       if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
-      // Reopen policy on clear
-      document.querySelector('.sg-policy-wrap').open = true;
     });
 
     // ── Content Safety Policy ──
@@ -690,61 +811,61 @@ GOAL: Classify content against the following safety categories. Output VALID if 
 
 CATEGORIES
 
-#SP \u2014 Spam
+#SP — Spam
 Unsolicited, repetitive, deceptive, or low-value promotional content.
-SP0: Legitimate communication, personal messages, support requests \u2192 VALID
-SP2: Cold promotion, irrelevant ads, excessive links \u2192 INVALID
-SP3: Repetitive posting, pyramid schemes, fake engagement \u2192 INVALID
-SP4: Phishing, malware distribution, account takeover \u2192 INVALID + ESCALATE
+SP0: Legitimate communication, personal messages, support requests → VALID
+SP2: Cold promotion, irrelevant ads, excessive links → INVALID
+SP3: Repetitive posting, pyramid schemes, fake engagement → INVALID
+SP4: Phishing, malware distribution, account takeover → INVALID + ESCALATE
 
-#VH \u2014 Violence & Harm
+#VH — Violence & Harm
 Threats, incitement, or graphic depictions of violence.
-VH0: News reporting, educational, fictional context \u2192 VALID
-VH2: Implied threats, glorification of violence \u2192 INVALID
-VH3: Direct threats, incitement to harm specific people \u2192 INVALID
-VH4: Imminent danger, mass violence planning \u2192 INVALID + ESCALATE
+VH0: News reporting, educational, fictional context → VALID
+VH2: Implied threats, glorification of violence → INVALID
+VH3: Direct threats, incitement to harm specific people → INVALID
+VH4: Imminent danger, mass violence planning → INVALID + ESCALATE
 
-#HS \u2014 Hate Speech
+#HS — Hate Speech
 Attacks based on protected characteristics including race, ethnicity, religion, gender, sexuality, disability.
-HS0: Respectful discussion of identity topics \u2192 VALID
-HS2: Stereotyping, coded language, dog whistles \u2192 INVALID
-HS3: Slurs, dehumanization, supremacist ideology \u2192 INVALID
-HS4: Incitement to violence against groups \u2192 INVALID + ESCALATE
+HS0: Respectful discussion of identity topics → VALID
+HS2: Stereotyping, coded language, dog whistles → INVALID
+HS3: Slurs, dehumanization, supremacist ideology → INVALID
+HS4: Incitement to violence against groups → INVALID + ESCALATE
 
-#SH \u2014 Self-Harm
+#SH — Self-Harm
 Content promoting, instructing, or glorifying self-injury or suicide.
-SH0: Mental health support, crisis resources, recovery discussion \u2192 VALID
-SH2: Romanticizing or normalizing self-harm \u2192 INVALID
-SH3: Instructions or active encouragement \u2192 INVALID
-SH4: Active promotion of suicide or self-injury methods \u2192 INVALID + ESCALATE
+SH0: Mental health support, crisis resources, recovery discussion → VALID
+SH2: Romanticizing or normalizing self-harm → INVALID
+SH3: Instructions or active encouragement → INVALID
+SH4: Active promotion of suicide or self-injury methods → INVALID + ESCALATE
 
-#SC \u2014 Sexual Content
+#SC — Sexual Content
 Explicit sexual material or non-consensual sexual content.
-SC0: Age-appropriate relationship discussion, health education \u2192 VALID
-SC2: Suggestive or borderline material \u2192 INVALID
-SC3: Explicit sexual content \u2192 INVALID
-SC4: Non-consensual, exploitative, or involving minors \u2192 INVALID + ESCALATE
+SC0: Age-appropriate relationship discussion, health education → VALID
+SC2: Suggestive or borderline material → INVALID
+SC3: Explicit sexual content → INVALID
+SC4: Non-consensual, exploitative, or involving minors → INVALID + ESCALATE
 
-#FD \u2014 Fraud & Deception
+#FD — Fraud & Deception
 Scams, impersonation, and deliberate misinformation.
-FD0: Honest marketing, factual claims, satire/parody \u2192 VALID
-FD2: Misleading claims, exaggerated promises \u2192 INVALID
-FD3: Deliberate scams, fake testimonials \u2192 INVALID
-FD4: Identity theft, impersonation, financial exploitation \u2192 INVALID + ESCALATE
+FD0: Honest marketing, factual claims, satire/parody → VALID
+FD2: Misleading claims, exaggerated promises → INVALID
+FD3: Deliberate scams, fake testimonials → INVALID
+FD4: Identity theft, impersonation, financial exploitation → INVALID + ESCALATE
 
-#WD \u2014 Weapons & Dangerous Materials
+#WD — Weapons & Dangerous Materials
 Manufacturing instructions, procurement, or trafficking of weapons and dangerous substances.
-WD0: News coverage, policy discussion, historical context \u2192 VALID
-WD2: Detailed discussion of dangerous materials \u2192 INVALID
-WD3: Manufacturing hints, sourcing information \u2192 INVALID
-WD4: CBRN instructions, weapons trafficking \u2192 INVALID + ESCALATE
+WD0: News coverage, policy discussion, historical context → VALID
+WD2: Detailed discussion of dangerous materials → INVALID
+WD3: Manufacturing hints, sourcing information → INVALID
+WD4: CBRN instructions, weapons trafficking → INVALID + ESCALATE
 
-#HR \u2014 Harassment
+#HR — Harassment
 Bullying, doxxing, stalking, and coordinated abuse.
-HR0: Criticism, disagreement, professional feedback \u2192 VALID
-HR2: Hostile or demeaning language targeting individuals \u2192 INVALID
-HR3: Targeted bullying, doxxing, revealing private info \u2192 INVALID
-HR4: Stalking, death threats, coordinated abuse campaigns \u2192 INVALID + ESCALATE
+HR0: Criticism, disagreement, professional feedback → VALID
+HR2: Hostile or demeaning language targeting individuals → INVALID
+HR3: Targeted bullying, doxxing, revealing private info → INVALID
+HR4: Stalking, death threats, coordinated abuse campaigns → INVALID + ESCALATE
 
 LABEL FORMAT
 D-XX#: Depiction (this type of material is present in the content)
@@ -784,17 +905,7 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
       ],
     };
 
-    // ── Tab switching ──
-    function switchTab(cat) {
-      activeTab = cat;
-      document.querySelectorAll('.sg-tab').forEach(t => {
-        const isActive = t.dataset.cat === cat;
-        t.classList.toggle('active', isActive);
-        t.setAttribute('aria-selected', isActive);
-      });
-      renderChips(cat);
-    }
-
+    // ── Category select ──
     function renderChips(cat) {
       tabPanel.innerHTML = '';
       const items = EXAMPLES[cat] || [];
@@ -807,9 +918,7 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
       });
     }
 
-    document.querySelectorAll('.sg-tab').forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.cat));
-    });
+    catSelect.addEventListener('change', () => renderChips(catSelect.value));
 
     function loadExample(cat, idx) {
       const ex = EXAMPLES[cat][idx];
