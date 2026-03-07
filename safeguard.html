@@ -109,6 +109,16 @@
       font-size: 0.78rem; font-weight: 800; color: var(--accent);
       text-transform: uppercase; letter-spacing: 0.07em;
     }
+    .sg-example-sub { font-size: 0.72rem; color: var(--text-2); margin-top: -6px; }
+    .sg-example-notice {
+      font-size: 0.72rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--accent-soft));
+      border-radius: var(--radius-sm); padding: 5px 10px;
+    }
+    .sg-example-notice[hidden] { display: none; }
+    .sg-kbd-hint {
+      font-size: 0.63rem; opacity: 0.55; font-family: 'DM Mono', var(--mono);
+      margin-left: 6px; letter-spacing: 0; font-weight: 400; font-style: normal;
+    }
     .sg-example-selects { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sg-cat-select {
       padding: 7px 26px 7px 10px;
@@ -437,6 +447,7 @@
     <!-- Primary example card -->
     <div class="sg-example-card">
       <span class="sg-example-lbl">Try an example</span>
+      <span class="sg-example-sub">Select a category and scenario, or type your own content below</span>
       <div class="sg-example-selects">
         <select class="sg-cat-select" id="catSelect" aria-label="Example category">
           <option value="spam">Spam</option>
@@ -450,8 +461,9 @@
         <select class="sg-cat-select sg-scenario-select" id="scenarioSelect" aria-label="Example scenario"></select>
       </div>
       <textarea class="sg-example-text" id="exampleText" placeholder="Select a scenario above, or type your own content here…" aria-label="Content to evaluate" rows="4"></textarea>
+      <div class="sg-example-notice" id="exampleNotice" aria-live="polite" hidden>Example loaded — edit or replace before evaluating</div>
       <div class="sg-example-foot">
-        <button class="sg-evaluate" id="generateBtn">Evaluate</button>
+        <button class="sg-evaluate" id="generateBtn">Evaluate <kbd class="sg-kbd-hint" aria-hidden="true">⌘↵</kbd></button>
         <button class="sg-clear-link" id="clearBtn" aria-label="Clear content and results">Clear</button>
       </div>
     </div>
@@ -702,36 +714,25 @@
       return null;
     }
 
-    // ── Render 8-category severity bar chart ──
+    // ── Render matched-category severity bar ──
     function renderCatViz(parsed) {
       if (!parsed || !parsed.catCode) {
         catViz.classList.remove('visible');
         catViz.innerHTML = '';
+        catViz.setAttribute('aria-hidden', 'true');
         return;
       }
       catViz.classList.add('visible');
-      catViz.innerHTML = ALL_CATS.map(code => {
-        const isActive = code === parsed.catCode;
-        const sev = isActive ? parsed.sev : 0;
-        const sevCls = isActive ? `sev${sev}` : '';
-        return `<div class="sg-cat-row${isActive ? ' active' : ''}">
-          <span class="sg-cat-code">${code}</span>
-          <div class="sg-cat-bar-track"><div class="sg-cat-bar-fill${sevCls ? ' ' + sevCls : ''}"></div></div>
-          <span class="sg-cat-name">${CATEGORY_SHORT[code] || code}</span>
-        </div>`;
-      }).join('');
-      // Animate bars after insert (force reflow)
-      requestAnimationFrame(() => {
-        catViz.querySelectorAll('.sg-cat-bar-fill').forEach(el => {
-          // Already has width from class, re-trigger transition
-          el.style.transition = 'none';
-          el.style.width = '0';
-          requestAnimationFrame(() => {
-            el.style.transition = '';
-            el.style.width = '';
-          });
-        });
-      });
+      catViz.setAttribute('aria-hidden', 'false');
+      // Show only the matched category — 9 bars with all-zero others was misleading
+      catViz.innerHTML = `<div class="sg-cat-row active">
+        <span class="sg-cat-code">${parsed.catCode}</span>
+        <div class="sg-cat-bar-track"><div class="sg-cat-bar-fill sev${parsed.sev}" id="catBarFill"></div></div>
+        <span class="sg-cat-name">${CATEGORY_SHORT[parsed.catCode] || parsed.catCode}</span>
+      </div>`;
+      // Animate bar after insert (force reflow)
+      const bar = catViz.querySelector('.sg-cat-bar-fill');
+      if (bar) requestAnimationFrame(() => { bar.style.transition = 'none'; bar.style.width = '0'; requestAnimationFrame(() => { bar.style.transition = ''; bar.style.width = ''; }); });
     }
 
     // ── Apply severity class to verdict box ──
@@ -781,6 +782,9 @@
     function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
 
     // ── Generate ──
+    const exampleNotice = document.getElementById('exampleNotice');
+    exampleText.addEventListener('focus', () => { if (exampleNotice) exampleNotice.hidden = true; });
+
     generateBtn.addEventListener('click', generate);
     exampleText.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); });
 
@@ -1000,6 +1004,7 @@
     clearBtn.addEventListener('click', () => {
       exampleText.value = '';
       scenarioSelect.value = '0';
+      if (exampleNotice) exampleNotice.hidden = true;
       if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
       setOutput(verdictOut, null, false, 'verdict'); setOutput(analysisOut, null, false, 'reasoning');
       verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
@@ -1167,6 +1172,7 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
       renderPolicyPreview();
       exampleText.value = ex.prompt;
       document.getElementById('policyHint').textContent = '(content safety policy loaded)';
+      if (exampleNotice) exampleNotice.hidden = false;
     }
 
     // ── Init ──
