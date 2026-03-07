@@ -162,7 +162,8 @@
       padding: 0; display: flex; align-items: center; gap: 5px; user-select: none;
     }
     .sg-policy-wrap summary::-webkit-details-marker { display: none; }
-    .sg-policy-wrap summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; display: inline-block; }
+    /* CSS border triangle — no Unicode text content, screen reader neutral */
+    .sg-policy-wrap summary::before { content: ''; display: inline-block; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 5px; border-color: transparent transparent transparent currentColor; transition: transform 0.15s; flex-shrink: 0; }
     .sg-policy-wrap[open] summary::before { transform: rotate(90deg); }
     .sg-policy-wrap .sg-policy-hint {
       font-size: 0.72rem; font-weight: 400; color: var(--text-2);
@@ -377,7 +378,7 @@
       display: flex; align-items: center; gap: 5px; user-select: none; padding: 0;
     }
     .sg-advanced summary::-webkit-details-marker { display: none; }
-    .sg-advanced summary::before { content: '\25B6'; font-size: 0.5rem; transition: transform 0.15s; display: inline-block; }
+    .sg-advanced summary::before { content: ''; display: inline-block; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 5px; border-color: transparent transparent transparent currentColor; transition: transform 0.15s; flex-shrink: 0; }
     .sg-advanced[open] summary::before { transform: rotate(90deg); }
     .sg-policy-wrap summary:focus-visible,
     .sg-advanced summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
