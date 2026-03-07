@@ -1,7 +1,22 @@
 {
   "name": "safeguard-ux",
   "version": "1.0.0",
-  "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b via HuggingFace Inference API. Paste text, get a PASS/FAIL/ESCALATE verdict with streamed reasoning.",
+  "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b — paste a message, get a verdict",
+  "author": "Luke Steuber <luke@lukesteuber.com> (https://lukesteuber.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lukeslp/oss-safeguard-ux.git"
+  },
+  "keywords": [
+    "content-moderation",
+    "safety",
+    "safeguard",
+    "openai",
+    "huggingface",
+    "llm",
+    "moderation-tools"
+  ],
   "scripts": {
     "start": "node proxy-server.js"
   }

@@ -6,3 +6,16 @@ __pycache__/
 .env
 .playwright-mcp/
 *.backup
+CLAUDE.md
+.claude/
+CRITIC.md
+ONBOARD.md
+SUGGESTIONS.md
+REPO_AUDIT.md
+*_STATUS.md
+*_PROGRESS.md
+SESSION_LOG.md
+WORK_LOG.md
+AGENT_REPORT.md
+temp_*
+.aider.*
