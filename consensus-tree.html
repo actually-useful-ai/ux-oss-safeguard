@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consensus · Debate Tree</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0D1117;
+      --bg-surface: #161B22;
+      --bg-elevated: #1C2128;
+      --border:    #30363D;
+      --text-0:    #E6EDF3;
+      --text-1:    #8B949E;
+      --text-2:    #484F58;
+
+      /* Tier palette */
+      --gold:      #C9A84C;
+      --gold-glow: rgba(201,168,76,0.18);
+      --gold-dim:  rgba(201,168,76,0.5);
+      --silver:    #8B95A2;
+      --silver-glow: rgba(139,149,162,0.14);
+      --silver-dim: rgba(139,149,162,0.5);
+      --bronze:    #B87333;
+      --bronze-glow: rgba(184,115,51,0.14);
+      --bronze-dim: rgba(184,115,51,0.5);
+
+      /* Vote colors */
+      --agree:     #3FB950;
+      --disagree:  #F85149;
+      --partial:   #E3B341;
+
+      --font-heading: 'Cormorant Garamond', serif;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-ui:      system-ui, sans-serif;
+
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text-0);
+      font-family: var(--font-ui);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 24px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .wordmark {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--gold);
+    }
+
+    .question-display {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      color: var(--text-1);
+      font-style: italic;
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .status-pill {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 3px 10px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .status-pill.active {
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+    .status-pill.complete {
+      border-color: rgba(63,185,80,0.4);
+      color: var(--agree);
+    }
+
+    /* ── SVG container ── */
+    #tree-container {
+      flex: 1 1 auto;
+      overflow: hidden;
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: fixed;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-0);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+      max-width: 260px;
+      line-height: 1.5;
+    }
+    #tooltip.visible { opacity: 1; }
+    #tooltip .tip-title {
+      font-family: var(--font-heading);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+    #tooltip .tip-verdict {
+      font-size: 0.7rem;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Streaming text box ── */
+    .stream-box {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      fill: var(--text-1);
+      pointer-events: none;
+    }
+
+    /* ── Demo controls ── */
+    #demo-bar {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 8px;
+      padding: 10px 24px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .demo-btn {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 5px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-1);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .demo-btn:hover { color: var(--text-0); border-color: var(--silver); }
+    .demo-btn.primary { border-color: var(--gold-dim); color: var(--gold); }
+    .demo-btn.primary:hover { background: var(--gold-glow); }
+
+    #demo-question {
+      flex: 1;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-0);
+    }
+    #demo-question::placeholder { color: var(--text-2); }
+    #demo-question:focus { outline: none; border-color: var(--gold-dim); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="wordmark">Consensus</span>
+    <span class="question-display" id="question-display">Awaiting question...</span>
+    <span class="status-pill" id="status-pill">idle</span>
+  </header>
+
+  <div id="tree-container">
+    <svg id="tree-svg" role="img" aria-label="Consensus debate tree showing LLM provider hierarchy and voting"></svg>
+  </div>
+
+  <div id="demo-bar">
+    <input id="demo-question" type="text" placeholder="Enter a question to debate…" value="Is consciousness fundamentally computational?">
+    <button class="demo-btn primary" onclick="startDebate()">Run Demo</button>
+    <button class="demo-btn" onclick="resetTree()">Reset</button>
+    <button class="demo-btn" onclick="addRandomVote()">+Vote</button>
+  </div>
+</div>
+
+<div id="tooltip" role="tooltip" aria-live="polite"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DATA STRUCTURES
+// ─────────────────────────────────────────────
+
+/**
+ * Tier definitions. Each provider maps to a tier and sub-models.
+ * In production these come from your SSE event schema.
+ */
+const PROVIDER_REGISTRY = {
+  anthropic: {
+    label: 'Anthropic',
+    tier: 'queen',
+    models: [
+      { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5' },
+      { id: 'claude-haiku-4-5',  label: 'Haiku 4.5'  },
+    ]
+  },
+  gemini: {
+    label: 'Gemini',
+    tier: 'king',
+    models: [
+      { id: 'gemini-flash-2-5', label: 'Flash 2.5' },
+      { id: 'gemini-pro-2-5',   label: 'Pro 2.5'   },
+    ]
+  },
+  openai: {
+    label: 'OpenAI',
+    tier: 'lord',
+    models: [
+      { id: 'gpt-4o',      label: 'GPT-4o'      },
+      { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    ]
+  },
+  xai: {
+    label: 'xAI',
+    tier: 'lord',
+    models: [
+      { id: 'grok-3',      label: 'Grok 3'      },
+      { id: 'grok-3-mini', label: 'Grok 3 Mini' },
+    ]
+  },
+  mistral: {
+    label: 'Mistral',
+    tier: 'knight',
+    models: [
+      { id: 'mistral-large', label: 'Large'  },
+      { id: 'mistral-small', label: 'Small'  },
+    ]
+  },
+  cohere: {
+    label: 'Cohere',
+    tier: 'knight',
+    models: [
+      { id: 'command-r-plus', label: 'Command R+'  },
+      { id: 'command-r',      label: 'Command R'   },
+    ]
+  },
+  groq: {
+    label: 'Groq',
+    tier: 'knight',
+    models: [
+      { id: 'llama-3-3-70b',  label: 'Llama 3.3 70B' },
+      { id: 'mixtral-8x7b',   label: 'Mixtral 8×7B'  },
+    ]
+  },
+  perplexity: {
+    label: 'Perplexity',
+    tier: 'knight',
+    models: [
+      { id: 'sonar-large', label: 'Sonar Large' },
+      { id: 'sonar-small', label: 'Sonar Small' },
+    ]
+  },
+  huggingface: {
+    label: 'HuggingFace',
+    tier: 'knight',
+    models: [
+      { id: 'qwen2-72b',       label: 'Qwen2 72B'    },
+      { id: 'mistral-7b-v3',   label: 'Mistral 7B v3'},
+    ]
+  }
+};
+
+/** Tier visual config */
+const TIER_STYLE = {
+  root:   { color: '#E6EDF3', glow: 'rgba(230,237,243,0.12)', strokeW: 2.5, r: 14 },
+  queen:  { color: '#C9A84C', glow: 'rgba(201,168,76,0.22)',  strokeW: 2,   r: 11 },
+  king:   { color: '#C9A84C', glow: 'rgba(201,168,76,0.18)',  strokeW: 2,   r: 11 },
+  lord:   { color: '#8B95A2', glow: 'rgba(139,149,162,0.18)', strokeW: 1.5, r: 9  },
+  knight: { color: '#B87333', glow: 'rgba(184,115,51,0.18)',  strokeW: 1.5, r: 9  },
+  model:  { color: '#484F58', glow: 'rgba(100,110,120,0.14)', strokeW: 1,   r: 7  },
+};
+
+/** Vote color mapping */
+const VOTE_COLOR = {
+  agree:    '#3FB950',
+  disagree: '#F85149',
+  partial:  '#E3B341',
+  pending:  '#484F58',
+  active:   '#C9A84C',
+};
+
+// ─────────────────────────────────────────────
+//  TREE STATE
+// ─────────────────────────────────────────────
+
+/**
+ * Mutable tree data store. All SSE updates mutate this and
+ * call redraw(). The root node is always id='root'.
+ *
+ * Node schema:
+ *   id         – unique string
+ *   name       – display label
+ *   tier       – 'root'|'queen'|'king'|'lord'|'knight'|'model'
+ *   status     – 'idle'|'active'|'streaming'|'voted'
+ *   vote       – null|'agree'|'disagree'|'partial'
+ *   confidence – 0-1 (shown as opacity modifier on fill)
+ *   streamText – current streaming snippet (last ~80 chars)
+ *   children   – array of child node objects
+ */
+let treeData = buildInitialTree();
+
+function buildInitialTree() {
+  return {
+    id: 'root',
+    name: 'Question',
+    tier: 'root',
+    status: 'idle',
+    vote: null,
+    confidence: null,
+    streamText: '',
+    children: []
+  };
+}
+
+/**
+ * Find a node by id in the tree (DFS).
+ */
+function findNode(id, node = treeData) {
+  if (node.id === id) return node;
+  for (const child of (node.children || [])) {
+    const found = findNode(id, child);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Ensure a provider branch exists, return it.
+ */
+function ensureProvider(providerId) {
+  const reg = PROVIDER_REGISTRY[providerId];
+  if (!reg) return null;
+  let node = findNode(`provider-${providerId}`);
+  if (!node) {
+    node = {
+      id: `provider-${providerId}`,
+      name: reg.label,
+      tier: reg.tier,
+      status: 'idle',
+      vote: null,
+      confidence: null,
+      streamText: '',
+      children: []
+    };
+    treeData.children.push(node);
+  }
+  return node;
+}
+
+/**
+ * Ensure a model leaf exists under a provider, return it.
+ */
+function ensureModel(providerId, modelId) {
+  const providerNode = ensureProvider(providerId);
+  if (!providerNode) return null;
+  const reg = PROVIDER_REGISTRY[providerId];
+  const modelReg = reg?.models.find(m => m.id === modelId);
+  let node = findNode(`model-${modelId}`);
+  if (!node) {
+    node = {
+      id: `model-${modelId}`,
+      name: modelReg?.label || modelId,
+      tier: 'model',
+      status: 'idle',
+      vote: null,
+      confidence: null,
+      streamText: '',
+      children: []
+    };
+    providerNode.children.push(node);
+  }
+  return node;
+}
+
+// ─────────────────────────────────────────────
+//  PUBLIC API — called by SSE event handlers
+// ─────────────────────────────────────────────
+
+/**
+ * setQuestion(text)
+ * Called when the question is submitted.
+ */
+function setQuestion(text) {
+  treeData.name = text;
+  treeData.status = 'active';
+  document.getElementById('question-display').textContent = text;
+  setPill('active');
+  redraw();
+}
+
+/**
+ * modelStart(providerId, modelId)
+ * Called when a model begins research.
+ * Creates nodes if they don't exist.
+ */
+function modelStart(providerId, modelId) {
+  const provNode = ensureProvider(providerId);
+  if (provNode && provNode.status === 'idle') provNode.status = 'active';
+  const modelNode = ensureModel(providerId, modelId);
+  if (modelNode) modelNode.status = 'active';
+  redraw();
+}
+
+/**
+ * modelStream(modelId, textChunk)
+ * Called with each streamed token. Keeps last 90 chars for display.
+ */
+function modelStream(modelId, textChunk) {
+  const node = findNode(`model-${modelId}`);
+  if (!node) return;
+  node.status = 'streaming';
+  node.streamText = (node.streamText + textChunk).slice(-90);
+  // Throttle redraws during streaming — only update stream text overlays
+  updateStreamLabels();
+}
+
+/**
+ * modelVote(modelId, vote, confidence)
+ * vote: 'agree'|'disagree'|'partial'
+ * confidence: 0–1
+ */
+function modelVote(modelId, vote, confidence = 1) {
+  const node = findNode(`model-${modelId}`);
+  if (!node) return;
+  node.status = 'voted';
+  node.vote = vote;
+  node.confidence = confidence;
+  node.streamText = '';
+
+  // Roll up vote to provider
+  const provNode = findNode(node.id.replace('model-', 'provider-').replace(/-[^-]+$/, ''));
+  rollUpProviderVote(node);
+  redraw();
+}
+
+/**
+ * providerVote(providerId, vote, confidence)
+ * Called when the provider-level consensus is determined.
+ */
+function providerVote(providerId, vote, confidence = 1) {
+  const node = findNode(`provider-${providerId}`);
+  if (!node) return;
+  node.status = 'voted';
+  node.vote = vote;
+  node.confidence = confidence;
+  redraw();
+}
+
+/**
+ * finalConsensus(vote, confidence)
+ */
+function finalConsensus(vote, confidence = 1) {
+  treeData.vote = vote;
+  treeData.confidence = confidence;
+  treeData.status = 'voted';
+  setPill('complete');
+  redraw();
+}
+
+/**
+ * Derive provider vote from its children's votes.
+ */
+function rollUpProviderVote(modelNode) {
+  // Find parent provider
+  for (const child of treeData.children) {
+    if ((child.children || []).find(m => m.id === modelNode.id)) {
+      const votes = child.children.filter(m => m.vote).map(m => m.vote);
+      if (!votes.length) return;
+      const counts = { agree: 0, disagree: 0, partial: 0 };
+      votes.forEach(v => counts[v]++);
+      const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+      child.vote = top[0];
+      child.confidence = top[1] / votes.length;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+//  D3 LAYOUT
+// ─────────────────────────────────────────────
+
+const MARGIN = { top: 60, right: 40, bottom: 40, left: 40 };
+
+// Node dimensions
+const NODE_H_GAP = 180; // horizontal spacing between levels
+const NODE_V_GAP = 52;  // vertical spacing between siblings
+
+let svgEl, g, gLinks, gNodes, gDefs;
+let width = 0, height = 0;
+let zoomBehavior;
+
+function initSvg() {
+  const container = document.getElementById('tree-container');
+  width  = container.clientWidth;
+  height = container.clientHeight;
+
+  svgEl = d3.select('#tree-svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Defs — filters and gradients
+  gDefs = svgEl.append('defs');
+  addFilters(gDefs);
+
+  // Zoom group
+  g = svgEl.append('g').attr('class', 'zoom-group');
+
+  gLinks = g.append('g').attr('class', 'links');
+  gNodes = g.append('g').attr('class', 'nodes');
+
+  // Zoom & pan
+  zoomBehavior = d3.zoom()
+    .scaleExtent([0.3, 3])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+
+  svgEl.call(zoomBehavior);
+
+  // Initial center transform
+  resetZoom(false);
+}
+
+function addFilters(defs) {
+  // Glow filter template — instantiated per tier color
+  const tiers = ['root', 'queen', 'lord', 'knight', 'model'];
+  tiers.forEach(tier => {
+    const col = TIER_STYLE[tier]?.color || '#ffffff';
+    const f = defs.append('filter')
+      .attr('id', `glow-${tier}`)
+      .attr('x', '-50%').attr('y', '-50%')
+      .attr('width', '200%').attr('height', '200%');
+    f.append('feGaussianBlur')
+      .attr('stdDeviation', tier === 'root' ? 4 : 3)
+      .attr('result', 'blur');
+    f.append('feMerge').selectAll('feMergeNode')
+      .data(['blur', 'SourceGraphic'])
+      .join('feMergeNode')
+      .attr('in', d => d);
+  });
+
+  // Pulse animation for active links
+  defs.append('filter').attr('id', 'pulse-glow')
+    .append('feGaussianBlur').attr('stdDeviation', 2).attr('result', 'blur');
+
+  // Arrow marker for links
+  defs.append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -4 8 8')
+    .attr('refX', 8)
+    .attr('refY', 0)
+    .attr('markerWidth', 4)
+    .attr('markerHeight', 4)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L8,0L0,4')
+    .attr('fill', '#30363D');
+}
+
+function resetZoom(animate = true) {
+  const t = d3.zoomIdentity.translate(MARGIN.left + 20, height / 2);
+  const sel = animate
+    ? svgEl.transition().duration(600).ease(d3.easeCubicOut)
+    : svgEl;
+  sel.call(zoomBehavior.transform, t);
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+
+let _layoutCache = null;
+
+function redraw() {
+  if (!svgEl) return;
+
+  // Build d3 hierarchy from mutable treeData
+  const root = d3.hierarchy(treeData, d => d.children?.length ? d.children : null);
+
+  // Horizontal tree — x = depth, y = breadth
+  const treeLayout = d3.tree()
+    .nodeSize([NODE_V_GAP, NODE_H_GAP])
+    .separation((a, b) => {
+      // Extra space between providers
+      if (a.depth === 1 && b.depth === 1) return 1.6;
+      return 1;
+    });
+
+  treeLayout(root);
+
+  // Swap x/y to make horizontal (root left, leaves right)
+  root.each(d => {
+    const tmp = d.x; d.x = d.y; d.y = tmp;
+  });
+
+  _layoutCache = root;
+
+  drawLinks(root);
+  drawNodes(root);
+}
+
+// ── Links ──
+
+function drawLinks(root) {
+  const linkData = root.links();
+
+  const linkPath = d3.linkHorizontal()
+    .x(d => d.x)
+    .y(d => d.y);
+
+  const links = gLinks.selectAll('g.link-group')
+    .data(linkData, d => `${d.source.data.id}->${d.target.data.id}`)
+    .join(
+      enter => {
+        const lg = enter.append('g').attr('class', 'link-group');
+        // Background matte
+        lg.append('path').attr('class', 'link-matte');
+        // Animated foreground
+        lg.append('path').attr('class', 'link-fore');
+        // Particle dot for streaming
+        lg.append('circle').attr('class', 'link-particle').attr('r', 3);
+        return lg;
+      }
+    );
+
+  // Style matte (thick, dark)
+  links.select('.link-matte')
+    .attr('d', linkPath)
+    .attr('fill', 'none')
+    .attr('stroke', '#1C2128')
+    .attr('stroke-width', 4);
+
+  // Style foreground
+  links.select('.link-fore')
+    .attr('fill', 'none')
+    .attr('stroke-width', d => linkStrokeWidth(d.target.data))
+    .attr('stroke', d => linkColor(d.target.data))
+    .attr('opacity', d => linkOpacity(d.target.data))
+    .attr('stroke-dasharray', d => isActive(d.target.data) ? '4 3' : null)
+    .attr('d', d => {
+      // Animated transition for new links
+      return linkPath(d);
+    })
+    .each(function(d) {
+      const el = d3.select(this);
+      // Restart dash-offset animation on active links
+      if (isActive(d.target.data)) {
+        el.attr('class', 'link-fore link-active-anim');
+      } else {
+        el.attr('class', 'link-fore');
+      }
+    });
+
+  // Particle dot rides along the path for streaming/active nodes
+  links.select('.link-particle')
+    .attr('fill', d => isStreaming(d.target.data) ? '#C9A84C' : 'transparent')
+    .attr('opacity', d => isStreaming(d.target.data) ? 0.9 : 0)
+    .each(function(d) {
+      if (!isStreaming(d.target.data)) return;
+      const pathEl = this.parentNode.querySelector('.link-fore');
+      if (!pathEl) return;
+      animateParticle(d3.select(this), pathEl);
+    });
+}
+
+function linkColor(nodeData) {
+  if (nodeData.vote) return VOTE_COLOR[nodeData.vote];
+  if (nodeData.status === 'streaming') return 'rgba(201,168,76,0.6)';
+  if (nodeData.status === 'active')    return 'rgba(201,168,76,0.3)';
+  return '#30363D';
+}
+
+function linkStrokeWidth(nodeData) {
+  if (nodeData.tier === 'root')   return 3;
+  if (nodeData.tier === 'queen' || nodeData.tier === 'king') return 2;
+  if (nodeData.tier === 'lord')   return 1.5;
+  return 1;
+}
+
+function linkOpacity(nodeData) {
+  if (nodeData.vote) return 0.9;
+  if (isActive(nodeData)) return 0.7;
+  return 0.35;
+}
+
+function isActive(d)    { return d.status === 'active' || d.status === 'streaming'; }
+function isStreaming(d) { return d.status === 'streaming'; }
+
+function animateParticle(dot, pathEl) {
+  const pathLength = pathEl.getTotalLength();
+  let t = 0;
+
+  function step() {
+    t = (t + 0.012) % 1;
+    const pt = pathEl.getPointAtLength(t * pathLength);
+    dot.attr('cx', pt.x).attr('cy', pt.y);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Nodes ──
+
+function drawNodes(root) {
+  const nodeData = root.descendants();
+
+  const nodeGroups = gNodes.selectAll('g.node')
+    .data(nodeData, d => d.data.id)
+    .join(
+      enter => {
+        const ng = enter.append('g')
+          .attr('class', 'node')
+          .attr('transform', d => `translate(${d.x},${d.y})`)
+          .attr('opacity', 0)
+          .attr('role', 'button')
+          .attr('tabindex', 0)
+          .attr('aria-label', d => nodeAriaLabel(d.data));
+
+        ng.call(
+          d3.transition()
+            .duration(500)
+            .ease(d3.easeCubicOut)
+        );
+        ng.transition()
+          .duration(500)
+          .ease(d3.easeCubicOut)
+          .attr('opacity', 1);
+
+        // Glow halo (behind everything)
+        ng.append('circle').attr('class', 'node-halo');
+
+        // Main circle
+        ng.append('circle').attr('class', 'node-ring');
+
+        // Inner fill
+        ng.append('circle').attr('class', 'node-fill');
+
+        // Tier icon / letter
+        ng.append('text').attr('class', 'node-glyph');
+
+        // Label
+        ng.append('text').attr('class', 'node-label');
+
+        // Status indicator dot
+        ng.append('circle').attr('class', 'node-status-dot');
+
+        // Stream text (clipped foreign label)
+        ng.append('text').attr('class', 'node-stream stream-box');
+
+        // Interactions
+        ng.on('mouseenter', (event, d) => showTooltip(event, d.data))
+          .on('mouseleave', hideTooltip)
+          .on('click', (event, d) => nodeClick(d.data))
+          .on('keydown', (event, d) => {
+            if (event.key === 'Enter' || event.key === ' ') nodeClick(d.data);
+          });
+
+        return ng;
+      },
+      update => update,
+      exit => exit
+        .transition().duration(300).attr('opacity', 0).remove()
+    );
+
+  // Move all nodes to new positions
+  nodeGroups.transition()
+    .duration(600)
+    .ease(d3.easeCubicInOut)
+    .attr('transform', d => `translate(${d.x},${d.y})`);
+
+  // Style each component
+  const ts = TIER_STYLE;
+
+  nodeGroups.select('.node-halo')
+    .attr('r', d => nodeR(d.data) + 8)
+    .attr('fill', d => ts[d.data.tier]?.glow || 'transparent')
+    .attr('opacity', d => isActive(d.data) ? 1 : 0)
+    .attr('class', d => `node-halo ${isActive(d.data) ? 'halo-pulse' : ''}`);
+
+  nodeGroups.select('.node-ring')
+    .attr('r', d => nodeR(d.data))
+    .attr('fill', 'none')
+    .attr('stroke', d => nodeStroke(d.data))
+    .attr('stroke-width', d => ts[d.data.tier]?.strokeW || 1.5)
+    .attr('opacity', d => isActive(d.data) ? 1 : 0.7);
+
+  nodeGroups.select('.node-fill')
+    .attr('r', d => nodeR(d.data) - 2)
+    .attr('fill', d => nodeFill(d.data))
+    .attr('opacity', d => d.data.status === 'idle' ? 0.3 : 0.85);
+
+  nodeGroups.select('.node-glyph')
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('font-size', d => d.data.tier === 'root' ? 10 : 7.5)
+    .attr('font-family', 'JetBrains Mono, monospace')
+    .attr('fill', d => ts[d.data.tier]?.color || '#ffffff')
+    .attr('opacity', 0.9)
+    .text(d => tierGlyph(d.data.tier));
+
+  nodeGroups.select('.node-label')
+    .attr('text-anchor', d => d.depth === 0 ? 'middle' : 'start')
+    .attr('x', d => d.depth === 0 ? 0 : nodeR(d.data) + 8)
+    .attr('y', d => d.depth === 0 ? nodeR(d.data) + 14 : 0)
+    .attr('dominant-baseline', 'central')
+    .attr('font-size', d => d.data.tier === 'root' ? 11 : d.data.tier === 'model' ? 9 : 10)
+    .attr('font-family', d => d.data.tier === 'root'
+      ? 'Cormorant Garamond, serif'
+      : 'JetBrains Mono, monospace')
+    .attr('fill', d => labelColor(d.data))
+    .attr('letter-spacing', d => d.data.tier === 'root' ? '0.04em' : '0.01em')
+    .text(d => d.data.name);
+
+  // Small colored status dot (top-right of circle)
+  nodeGroups.select('.node-status-dot')
+    .attr('cx', d => nodeR(d.data) * 0.7)
+    .attr('cy', d => -nodeR(d.data) * 0.7)
+    .attr('r', 3.5)
+    .attr('fill', d => statusDotColor(d.data))
+    .attr('opacity', d => d.data.status !== 'idle' ? 1 : 0);
+
+  // Streaming text — appears to the right for model nodes
+  nodeGroups.select('.node-stream')
+    .attr('x', d => d.data.tier === 'model' ? nodeR(d.data) + 8 : 0)
+    .attr('y', d => d.data.tier === 'model' ? 12 : 0)
+    .attr('font-size', 7)
+    .attr('fill', '#484F58')
+    .attr('opacity', d => d.data.streamText ? 1 : 0)
+    .text(d => d.data.streamText ? `"${d.data.streamText.slice(-60)}…"` : '');
+
+  // Confidence bar (below provider nodes)
+  drawConfidenceBars(nodeGroups);
+}
+
+function drawConfidenceBars(nodeGroups) {
+  // Append or update a small rect-based confidence bar under voted nodes
+  nodeGroups.each(function(d) {
+    const g = d3.select(this);
+    const data = d.data;
+    if (!data.confidence || !data.vote) {
+      g.select('.conf-bar-bg').remove();
+      g.select('.conf-bar-fill').remove();
+      return;
+    }
+    const r = nodeR(data);
+    const barW = r * 2.4;
+    const barH = 3;
+    const barY = r + 6;
+
+    let bg = g.select('.conf-bar-bg');
+    if (bg.empty()) {
+      bg = g.append('rect').attr('class', 'conf-bar-bg');
+    }
+    bg.attr('x', -barW / 2)
+      .attr('y', barY)
+      .attr('width', barW)
+      .attr('height', barH)
+      .attr('rx', 1.5)
+      .attr('fill', '#1C2128')
+      .attr('stroke', '#30363D')
+      .attr('stroke-width', 0.5);
+
+    let fill = g.select('.conf-bar-fill');
+    if (fill.empty()) {
+      fill = g.append('rect').attr('class', 'conf-bar-fill')
+        .attr('width', 0);
+    }
+    fill.attr('x', -barW / 2)
+      .attr('y', barY)
+      .attr('height', barH)
+      .attr('rx', 1.5)
+      .attr('fill', VOTE_COLOR[data.vote])
+      .transition().duration(400).ease(d3.easeCubicOut)
+      .attr('width', barW * data.confidence);
+  });
+}
+
+// ── Update stream labels without full redraw ──
+
+function updateStreamLabels() {
+  if (!_layoutCache) return;
+  gNodes.selectAll('g.node').select('.node-stream')
+    .text(d => d.data.streamText ? `"${d.data.streamText.slice(-60)}…"` : '')
+    .attr('opacity', d => d.data.streamText ? 1 : 0);
+}
+
+// ── Style helpers ──
+
+function nodeR(d) {
+  return TIER_STYLE[d.tier]?.r || 7;
+}
+
+function nodeStroke(d) {
+  if (d.vote)              return VOTE_COLOR[d.vote];
+  if (isActive(d))         return TIER_STYLE[d.tier]?.color || '#ffffff';
+  return '#30363D';
+}
+
+function nodeFill(d) {
+  if (d.vote) {
+    const base = VOTE_COLOR[d.vote];
+    // Darken slightly for fill
+    return base + '55';
+  }
+  if (isActive(d)) return TIER_STYLE[d.tier]?.glow || '#1C2128';
+  return '#0D1117';
+}
+
+function labelColor(d) {
+  if (d.vote) return VOTE_COLOR[d.vote];
+  if (isActive(d)) return TIER_STYLE[d.tier]?.color || '#E6EDF3';
+  return d.tier === 'model' ? '#8B949E' : '#C6CDD5';
+}
+
+function statusDotColor(d) {
+  if (d.vote)                  return VOTE_COLOR[d.vote];
+  if (d.status === 'streaming') return '#C9A84C';
+  if (d.status === 'active')   return '#3FB950';
+  return 'transparent';
+}
+
+function tierGlyph(tier) {
+  return { root: '?', queen: 'Q', king: 'K', lord: 'L', knight: '♞', model: '·' }[tier] || '·';
+}
+
+function nodeAriaLabel(d) {
+  const base = `${d.name} (${d.tier})`;
+  if (d.vote) return `${base} — voted ${d.vote} with ${Math.round((d.confidence || 1) * 100)}% confidence`;
+  if (d.status === 'streaming') return `${base} — currently researching`;
+  return base;
+}
+
+// ─────────────────────────────────────────────
+//  TOOLTIP
+// ─────────────────────────────────────────────
+
+const tipEl = document.getElementById('tooltip');
+
+function showTooltip(event, d) {
+  const tier = d.tier.charAt(0).toUpperCase() + d.tier.slice(1);
+  const voteStr = d.vote
+    ? `<div class="tip-verdict" style="color:${VOTE_COLOR[d.vote]}">
+         ${d.vote.toUpperCase()}
+         ${d.confidence ? `· ${Math.round(d.confidence * 100)}% confidence` : ''}
+       </div>`
+    : '';
+
+  tipEl.innerHTML = `
+    <div class="tip-title">${d.name}</div>
+    <div style="color:var(--text-1); font-size:0.68rem">${tier} · ${d.status}</div>
+    ${voteStr}
+    ${d.streamText ? `<div style="color:var(--text-2); font-size:0.65rem; margin-top:4px">"${d.streamText.slice(-80)}…"</div>` : ''}
+  `;
+
+  const x = Math.min(event.clientX + 14, window.innerWidth - 280);
+  const y = Math.min(event.clientY - 10, window.innerHeight - 160);
+  tipEl.style.left = x + 'px';
+  tipEl.style.top  = y + 'px';
+  tipEl.classList.add('visible');
+}
+
+function hideTooltip() {
+  tipEl.classList.remove('visible');
+}
+
+function nodeClick(d) {
+  // In production: open detail drawer, highlight sub-tree, etc.
+  console.log('Node selected:', d);
+}
+
+// ─────────────────────────────────────────────
+//  STATUS PILL
+// ─────────────────────────────────────────────
+
+function setPill(state) {
+  const pill = document.getElementById('status-pill');
+  pill.className = `status-pill ${state}`;
+  pill.textContent = { idle: 'idle', active: 'researching…', complete: 'consensus reached' }[state] || state;
+}
+
+// ─────────────────────────────────────────────
+//  CSS KEYFRAMES (injected, avoids extra stylesheet)
+// ─────────────────────────────────────────────
+
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes haloPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%       { opacity: 0.9; transform: scale(1.15); }
+  }
+  @keyframes dashFlow {
+    from { stroke-dashoffset: 28; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  /* The transform on SVG elements needs to account for the node's
+     local coord space. Use filter-based pulse instead. */
+  .halo-pulse {
+    animation: haloPulse 1.8s ease-in-out infinite;
+    transform-origin: 0 0;
+    transform-box: fill-box;
+  }
+  .link-active-anim {
+    animation: dashFlow 0.6s linear infinite;
+  }
+`;
+document.head.appendChild(style);
+
+// ─────────────────────────────────────────────
+//  DEMO CONTROLS
+// ─────────────────────────────────────────────
+
+let demoTimer = null;
+
+function resetTree() {
+  if (demoTimer) { clearTimeout(demoTimer); demoTimer = null; }
+  treeData = buildInitialTree();
+  document.getElementById('question-display').textContent = 'Awaiting question…';
+  setPill('idle');
+  redraw();
+  resetZoom();
+}
+
+/**
+ * startDebate() — drives a scripted animation sequence.
+ * In production, replace this with SSE event listeners.
+ */
+function startDebate() {
+  resetTree();
+  const question = document.getElementById('demo-question').value.trim()
+    || 'Is consciousness fundamentally computational?';
+
+  const SEQ = buildDemoSequence(question);
+  let i = 0;
+
+  function step() {
+    if (i >= SEQ.length) return;
+    const evt = SEQ[i++];
+    evt.fn();
+    demoTimer = setTimeout(step, evt.delay);
+  }
+  step();
+}
+
+function buildDemoSequence(question) {
+  const providers = Object.keys(PROVIDER_REGISTRY);
+  const votes = ['agree', 'disagree', 'partial', 'agree', 'agree', 'disagree', 'agree', 'partial', 'agree'];
+
+  const seq = [
+    { delay: 200,  fn: () => setQuestion(question) },
+  ];
+
+  let t = 0;
+  providers.forEach((pid, pi) => {
+    const reg = PROVIDER_REGISTRY[pid];
+    reg.models.forEach((model, mi) => {
+      seq.push({ delay: 300 + t, fn: () => modelStart(pid, model.id) });
+      t += 220;
+    });
+  });
+
+  // Streaming snippets
+  const snippets = [
+    'The question of computational consciousness requires',
+    'examining whether substrate-independent information',
+    'processing can give rise to phenomenal experience…',
+  ];
+  providers.forEach((pid, pi) => {
+    const reg = PROVIDER_REGISTRY[pid];
+    reg.models.forEach((model, mi) => {
+      snippets.forEach((s, si) => {
+        seq.push({
+          delay: 2400 + pi * 180 + mi * 90 + si * 80,
+          fn: () => modelStream(model.id, s)
+        });
+      });
+    });
+  });
+
+  // Votes
+  providers.forEach((pid, pi) => {
+    const reg = PROVIDER_REGISTRY[pid];
+    reg.models.forEach((model, mi) => {
+      const vote = votes[(pi * 2 + mi) % votes.length];
+      const conf = 0.6 + Math.random() * 0.38;
+      seq.push({
+        delay: 4800 + pi * 200 + mi * 120,
+        fn: () => modelVote(model.id, vote, conf)
+      });
+    });
+  });
+
+  // Provider rollup
+  providers.forEach((pid, pi) => {
+    const pVote = votes[pi % votes.length];
+    const pConf = 0.65 + Math.random() * 0.3;
+    seq.push({ delay: 6600 + pi * 150, fn: () => providerVote(pid, pVote, pConf) });
+  });
+
+  // Final consensus
+  seq.push({ delay: 8200, fn: () => finalConsensus('agree', 0.73) });
+
+  return seq;
+}
+
+function addRandomVote() {
+  const providers = Object.keys(PROVIDER_REGISTRY);
+  const pid = providers[Math.floor(Math.random() * providers.length)];
+  const reg = PROVIDER_REGISTRY[pid];
+  const model = reg.models[Math.floor(Math.random() * reg.models.length)];
+  const votes = ['agree', 'disagree', 'partial'];
+  const vote = votes[Math.floor(Math.random() * 3)];
+
+  modelStart(pid, model.id);
+  setTimeout(() => modelVote(model.id, vote, 0.5 + Math.random() * 0.5), 400);
+}
+
+// ─────────────────────────────────────────────
+//  RESIZE HANDLER
+// ─────────────────────────────────────────────
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const container = document.getElementById('tree-container');
+    width  = container.clientWidth;
+    height = container.clientHeight;
+    svgEl.attr('viewBox', `0 0 ${width} ${height}`);
+    resetZoom(false);
+    redraw();
+  }, 150);
+});
+
+// ─────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSvg();
+  redraw(); // draws the root-only skeleton
+});
+</script>
+</body>
+</html>
