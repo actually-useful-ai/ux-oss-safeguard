@@ -97,24 +97,45 @@
       display: grid; grid-template-columns: 1fr 2fr; gap: 16px; align-items: start;
     }
 
-    /* ─── Example selector (dropdowns) ─── */
-    .sg-examples-row { display: flex; align-items: center; gap: 8px; }
+    /* ─── Example card (primary interaction) ─── */
+    .sg-example-card {
+      background: var(--accent-soft);
+      border: 2px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .sg-example-lbl {
+      font-size: 0.78rem; font-weight: 800; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .sg-example-selects { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sg-cat-select {
-      padding: 4px 22px 4px 9px;
-      border: 1px solid var(--border); border-radius: var(--radius-sm);
-      background: var(--bg-2); color: var(--text-0);
-      font-size: 0.72rem; font-weight: 500; font-family: var(--font);
+      padding: 7px 26px 7px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+      border-radius: var(--radius-sm);
+      background: var(--bg-1); color: var(--text-0);
+      font-size: 0.8rem; font-weight: 500; font-family: var(--font);
       cursor: pointer; transition: all var(--ease);
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5' viewBox='0 0 9 5'%3E%3Cpath d='M1 1l3.5 3 3.5-3' stroke='%23888' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 6px center;
+      background-repeat: no-repeat; background-position: right 8px center;
       width: auto; flex-shrink: 0;
     }
     .sg-cat-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
-    .sg-cat-select:hover { border-color: var(--border-hover); color: var(--text-0); }
-    .sg-scenario-select {
-      flex: 1; min-width: 0; max-width: 260px;
+    .sg-cat-select:hover { border-color: var(--accent); }
+    .sg-scenario-select { flex: 1; min-width: 0; }
+    .sg-example-text {
+      font-size: 0.84rem; line-height: 1.65; color: var(--text-1);
+      background: var(--bg-1); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 11px 14px;
+      min-height: 64px; max-height: 150px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-word;
     }
+    .sg-example-text:empty::before {
+      content: 'Select a scenario above'; color: var(--text-2); font-style: italic;
+    }
+    .sg-example-foot { display: flex; gap: 8px; align-items: center; }
 
     .sg-section-label {
       font-size: 0.72rem; font-weight: 700; color: var(--text-0);
@@ -203,11 +224,9 @@
     .sg-md-text { font-size: 0.71rem; color: var(--text-2); padding-left: 10px; }
 
     /* ─── Prompt ─── */
-    .sg-prompt-area textarea { font-size: 0.84rem; min-height: 72px; max-width: 100%; }
     @supports (-webkit-touch-callout: none) {
       textarea, input[type="range"] { font-size: 16px !important; }
     }
-    .sg-actions-row { display: flex; gap: 8px; align-items: center; }
     .sg-evaluate {
       flex: 1; padding: 11px 24px; background: var(--accent); color: #fff; border: none;
       border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 700;
@@ -354,7 +373,8 @@
     @media (max-width: 700px) {
       .sg-body { padding: 16px 12px 40px; gap: 14px; }
       .sg-bar { padding: 10px 12px; }
-      .sg-examples-row { gap: 8px; }
+      .sg-example-card { padding: 14px 14px; gap: 10px; }
+      .sg-example-selects { gap: 6px; }
       .sg-results-row { grid-template-columns: 1fr; gap: 12px; }
       .sg-sliders { grid-template-columns: 1fr 1fr; }
       .sg-verdict-box { padding: 11px 13px; }
@@ -409,20 +429,30 @@
   </header>
 
   <main class="sg-body">
-    <!-- Example selector -->
-    <div class="sg-examples-row">
-      <label class="sg-section-label" for="catSelect">Try an example</label>
-      <select class="sg-cat-select" id="catSelect" aria-label="Example category">
-        <option value="spam">Spam</option>
-        <option value="violence">Violence</option>
-        <option value="hate">Hate Speech</option>
-        <option value="fraud">Fraud</option>
-        <option value="harm">Self-Harm</option>
-        <option value="military" selected>Military</option>
-        <option value="legit">Legitimate</option>
-      </select>
-      <select class="sg-cat-select sg-scenario-select" id="scenarioSelect" aria-label="Example scenario"></select>
+    <!-- Primary example card -->
+    <div class="sg-example-card">
+      <span class="sg-example-lbl">Try an example</span>
+      <div class="sg-example-selects">
+        <select class="sg-cat-select" id="catSelect" aria-label="Example category">
+          <option value="spam">Spam</option>
+          <option value="violence">Violence</option>
+          <option value="hate">Hate Speech</option>
+          <option value="fraud">Fraud</option>
+          <option value="harm">Self-Harm</option>
+          <option value="military" selected>Military</option>
+          <option value="legit">Legitimate</option>
+        </select>
+        <select class="sg-cat-select sg-scenario-select" id="scenarioSelect" aria-label="Example scenario"></select>
+      </div>
+      <div class="sg-example-text" id="exampleText" role="region" aria-label="Selected scenario content"></div>
+      <div class="sg-example-foot">
+        <button class="sg-evaluate" id="generateBtn">Evaluate</button>
+        <button class="sg-clear-link" id="clearBtn">Clear</button>
+      </div>
     </div>
+
+    <!-- Hidden prompt holder (read by generate()) -->
+    <textarea id="promptInput" style="display:none;" aria-hidden="true"></textarea>
 
     <!-- Policy (collapsed by default) -->
     <details class="sg-policy-wrap" id="policyDetails">
@@ -436,16 +466,6 @@
       <div class="sg-policy-preview" id="policyPreview"></div>
       <textarea id="policyInput" placeholder="Classification rules and severity levels..." style="display:none;"></textarea>
     </details>
-
-    <!-- Prompt -->
-    <div class="sg-prompt-area">
-      <div class="sg-section-label" style="margin-bottom: 6px;">Content to evaluate</div>
-      <textarea id="promptInput" placeholder="Paste or type the message you want to classify..."></textarea>
-      <div class="sg-actions-row" style="margin-top: 8px;">
-        <button class="sg-evaluate" id="generateBtn">Evaluate</button>
-        <button class="sg-clear-link" id="clearBtn">Clear</button>
-      </div>
-    </div>
 
     <hr class="sg-divider">
 
@@ -594,6 +614,7 @@
     const resultsRow = document.getElementById('resultsRow');
     const scenarioSelect = document.getElementById('scenarioSelect');
     const catSelect = document.getElementById('catSelect');
+    const exampleText = document.getElementById('exampleText');
     const catViz = document.getElementById('catViz');
 
     let abortCtrl = null, startTime = null, timerInterval = null;
@@ -953,6 +974,7 @@
 
     clearBtn.addEventListener('click', () => {
       promptInput.value = '';
+      exampleText.textContent = '';
       setOutput(verdictOut, null, false, 'verdict'); setOutput(analysisOut, null, false, 'reasoning');
       verdictOut.classList.remove('sev0', 'sev2', 'sev3', 'sev4', 'escalate');
       catViz.classList.remove('visible'); catViz.innerHTML = '';
@@ -1116,14 +1138,17 @@ Append sub-code letter for specifics (e.g., D-SP4.a for phishing, D-VH3.b for in
       policyInput.value = SAFETY_POLICY;
       renderPolicyPreview();
       promptInput.value = ex.prompt;
+      exampleText.textContent = ex.prompt;
       document.getElementById('policyHint').textContent = '(content safety policy loaded)';
-      promptInput.focus();
+      generateBtn.focus();
     }
 
     // ── Init ──
     policyInput.value = SAFETY_POLICY;
     setPolicyMode('preview'); // render markdown on load
     updateScenarioSelect('military');
+    // Pre-load first military example
+    loadExample('military', 0);
   </script>
 </body>
 </html>
