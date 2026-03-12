@@ -122,8 +122,8 @@ You need a [HuggingFace token](https://huggingface.co/settings/tokens) with infe
 
 ```bash
 # Clone
-git clone https://github.com/lukeslp/oss-safeguard-ux.git
-cd oss-safeguard-ux
+git clone https://github.com/lukeslp/ux-oss-safeguard.git
+cd ux-oss-safeguard
 
 # Token auto-loads from ~/.cache/huggingface/token (set by huggingface-cli login)
 # Or set it explicitly:
