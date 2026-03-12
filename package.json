@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeslp/oss-safeguard-ux.git"
+    "url": "https://github.com/lukeslp/ux-oss-safeguard.git"
   },
   "keywords": [
     "content-moderation",
