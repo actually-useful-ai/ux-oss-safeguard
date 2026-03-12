@@ -1,5 +1,5 @@
 {
-  "name": "safeguard-ux",
+  "name": "ux-oss-safeguard",
   "version": "1.0.0",
   "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b — paste a message, get a verdict",
   "author": "Luke Steuber <luke@lukesteuber.com> (https://lukesteuber.com)",
