@@ -19,8 +19,8 @@ Built on OpenAI's [`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-os
 
 You give it two things:
 
-1. **A policy** — the rules that define what's acceptable. The built-in policy covers 8 safety categories (spam, violence, hate speech, self-harm, sexual content, fraud, weapons, harassment). You can edit the policy or write your own.
-2. **Content to evaluate** — any text you want classified against that policy.
+1. **A policy**: the rules that define what's acceptable. The built-in policy covers 8 safety categories (spam, violence, hate speech, self-harm, sexual content, fraud, weapons, harassment). You can edit the policy or write your own.
+2. **Content to evaluate**: any text you want classified against that policy.
 
 The model reads both, thinks through its classification, and returns a verdict with full reasoning.
 
@@ -32,7 +32,7 @@ Every evaluation produces one of three outcomes:
 |---------|-------|---------|
 | **PASS** | Green | Content is within the policy |
 | **FAIL** | Red | Content violates the policy |
-| **ESCALATE** | Amber | Severe violation — flagged for human review |
+| **ESCALATE** | Amber | Severe violation, flagged for human review |
 
 ![ESCALATE verdict for a phishing attempt](screenshots/safeguard-escalate.png)
 
@@ -73,23 +73,23 @@ Each category has four severity levels:
 
 The model outputs structured labels following a prefix system:
 
-- **`D-XX#`** — *Depiction*: this type of content is present in the text (e.g., `D-SP4` = the text contains phishing)
-- **`R-XX#`** — *Request*: the user is asking to generate this type of content (e.g., `R-VH3` = requesting violent threats)
+- **`D-XX#`** *Depiction*: this type of content is present in the text (e.g., `D-SP4` = the text contains phishing)
+- **`R-XX#`** *Request*: the user is asking to generate this type of content (e.g., `R-VH3` = requesting violent threats)
 
 Sub-codes after a dot add specifics: `D-SP4.a` for phishing, `D-VH3.b` for incitement.
 
-You can edit the policy textarea to write your own classification rules. The model works with any policy structure — it's not limited to these 8 categories.
+You can edit the policy textarea to write your own classification rules. The model works with any policy structure; it's not limited to these 8 categories.
 
 ## About the model
 
-[`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-oss-safeguard-20b) is a 20-billion parameter content classification model that OpenAI released under an open license. It evaluates text against structured policies and produces labeled verdicts — that's what it was built for.
+[`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-oss-safeguard-20b) is a 20-billion parameter content classification model that OpenAI released under an open license. It evaluates text against structured policies and produces labeled verdicts: that's what it was built for.
 
 This tool wraps that model with a usable interface:
 
 - Tabbed example library across all 8 categories so you can test immediately
 - Streamed reasoning so you can watch the model think through its classification in real time
 - Decoded verdicts that translate technical codes into readable descriptions
-- Editable policy — swap in your own rules without touching code
+- Editable policy: swap in your own rules without touching code
 
 The model runs on [HuggingFace's Inference API](https://huggingface.co/docs/api-inference/), not locally. You need a HuggingFace token with inference permissions.
 
@@ -100,11 +100,11 @@ Browser  →  proxy-server.js (port 3456)  →  HuggingFace Inference API
                                               (openai/gpt-oss-safeguard-20b)
 ```
 
-The proxy is a single Node.js file with **zero npm dependencies** — just `http`, `https`, `fs`, and `path` from the standard library. It does three things:
+The proxy is a single Node.js file with **zero npm dependencies**: just `http`, `https`, `fs`, and `path` from the standard library. It does three things:
 
-1. **Serves the HTML frontends** — the evaluator at `/` and the chat interface at `/chat`
-2. **Translates request formats** — the frontend sends requests in OpenAI-compatible format; the proxy forwards them to HuggingFace's chat completions endpoint
-3. **Streams responses** — SSE from HuggingFace gets translated to newline-delimited JSON chunks that the frontend parses incrementally
+1. **Serves the HTML frontends**: the evaluator at `/` and the chat interface at `/chat`
+2. **Translates request formats**: the frontend sends requests in OpenAI-compatible format; the proxy forwards them to HuggingFace's chat completions endpoint
+3. **Streams responses**: SSE from HuggingFace gets translated to newline-delimited JSON chunks that the frontend parses incrementally
 
 ### Files
 
@@ -137,7 +137,7 @@ node proxy-server.js
 
 Override the port with `PORT=8080 node proxy-server.js`.
 
-No `npm install` needed — there are no dependencies.
+No `npm install` needed; there are no dependencies.
 
 ### Gradio version
 
@@ -153,14 +153,14 @@ python app.py
 ## Example walkthrough
 
 1. Open the evaluator
-2. The **Spam** tab is selected by default — click **Phishing email**
+2. The **Spam** tab is selected by default; click **Phishing email**
 3. The policy textarea fills with the Content Safety Policy and the prompt fills with a phishing message
 4. Click **Evaluate**
 5. The policy collapses, the model starts streaming its reasoning
-6. Verdict appears: **ESCALATE** — "Extreme Fraud · Fraud & Deception · Flagged for review"
+6. Verdict appears: **ESCALATE**, "Extreme Fraud · Fraud & Deception · Flagged for review"
 7. Click **Clear** to reset everything (policy reopens)
 
-Try the **Legitimate** tab — a support request should come back **PASS**.
+Try the **Legitimate** tab; a support request should come back **PASS**.
 
 ## Deployment
 
@@ -172,11 +172,11 @@ Both HTML files use the [IO Suite shared theme](https://dr.eamer.dev/io/) for co
 
 Both interfaces are built with accessibility as a baseline, not an afterthought:
 
-- **Skip link** — keyboard users can jump past the header directly to the main content
-- **Live region** — the verdict output uses `aria-busy` so screen readers announce when evaluation is running
-- **Reduced motion** — animations and transitions are disabled automatically when `prefers-reduced-motion` is set
-- **Full keyboard navigation** — every control is reachable and operable without a mouse
-- **WCAG contrast** — color choices meet AA contrast ratios in both light and dark themes
+- **Skip link**: keyboard users can jump past the header directly to the main content
+- **Live region**: the verdict output uses `aria-busy` so screen readers announce when evaluation is running
+- **Reduced motion**: animations and transitions are disabled automatically when `prefers-reduced-motion` is set
+- **Full keyboard navigation**: every control is reachable and operable without a mouse
+- **WCAG contrast**: color choices meet AA contrast ratios in both light and dark themes
 
 ## License
 
