@@ -15,6 +15,13 @@ Built on OpenAI's [`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-os
 
 ![Safeguard showing a PASS verdict for a legitimate support request](screenshots/safeguard-pass.png)
 
+## Development and future ideas
+
+The [project plan](PROJECT_PLAN.md) tracks verified behavior and remaining work.
+The [mobile concept notes](APP_STORE_LAUNCH_PACK.md) preserve ideas for a possible
+future app. This repository currently contains web and Gradio interfaces; it has
+no native iOS project or submission-ready store assets.
+
 ## What it does
 
 You give it two things:
@@ -122,7 +129,7 @@ You need a [HuggingFace token](https://huggingface.co/settings/tokens) with infe
 
 ```bash
 # Clone
-git clone https://github.com/lukeslp/ux-oss-safeguard.git
+git clone https://github.com/actually-useful-ai/ux-oss-safeguard.git
 cd ux-oss-safeguard
 
 # Token auto-loads from ~/.cache/huggingface/token (set by huggingface-cli login)
@@ -141,7 +148,8 @@ No `npm install` needed; there are no dependencies.
 
 ### Gradio version
 
-There's also a Gradio interface in `gpt-oss-safeguard/`:
+The Gradio interface in `gpt-oss-safeguard/` uses the same local Node proxy at
+`http://localhost:3456` by default. It uses Gradio 6; start the proxy first, then run:
 
 ```bash
 cd gpt-oss-safeguard
@@ -149,6 +157,10 @@ pip install -r requirements.txt
 python app.py
 # http://localhost:7860
 ```
+
+To use a local Ollama server instead, set `OLLAMA_URL=http://localhost:11434`
+and `OLLAMA_MODEL` to an installed model. Offline transport and streaming tests run
+with `python3 -m unittest discover -s tests -v`; they make no model requests.
 
 ## Example walkthrough
 

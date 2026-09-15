@@ -1,12 +1,12 @@
 {
   "name": "ux-oss-safeguard",
   "version": "1.0.0",
-  "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b — paste a message, get a verdict",
+  "description": "Content safety evaluator using OpenAI's gpt-oss-safeguard-20b \u2014 paste a message, get a verdict",
   "author": "Luke Steuber <luke@lukesteuber.com> (https://lukesteuber.com)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeslp/ux-oss-safeguard.git"
+    "url": "https://github.com/actually-useful-ai/ux-oss-safeguard.git"
   },
   "keywords": [
     "content-moderation",
@@ -18,6 +18,7 @@
     "moderation-tools"
   ],
   "scripts": {
-    "start": "node proxy-server.js"
+    "start": "node proxy-server.js",
+    "test": "python3 -m unittest discover -s tests -v"
   }
 }

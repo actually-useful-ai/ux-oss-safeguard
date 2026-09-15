@@ -1,3 +1,15 @@
+"""Gradio interface for policy evaluation with streamed analysis and verdicts.
+
+Defaults to the sibling Node proxy at http://localhost:3456 using
+gpt-oss-safeguard-20b. Set OLLAMA_URL and OLLAMA_MODEL to use a local
+Ollama server instead. Sampling settings also accept environment overrides.
+
+The request uses the policy as its system message. generate_stream yields
+analysis, verdict and metadata as the response arrives, preserving text on
+either side of the first assistantfinal boundary. The original interface
+came from OpenAI's Hugging Face Space; see this directory's README.
+"""
+
 import os
 import re
 import time
@@ -8,14 +20,12 @@ from typing import List, Dict, Tuple
 import gradio as gr
 
 # === Config (override via env vars) ===
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-MODEL_ID = os.environ.get("OLLAMA_MODEL", "glm-4.7-flash")
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:3456")
+MODEL_ID = os.environ.get("OLLAMA_MODEL", "gpt-oss-safeguard-20b")
 DEFAULT_MAX_NEW_TOKENS = int(os.environ.get("MAX_NEW_TOKENS", 512))
 DEFAULT_TEMPERATURE = float(os.environ.get("TEMPERATURE", 1))
 DEFAULT_TOP_P = float(os.environ.get("TOP_P", 1.0))
 DEFAULT_REPETITION_PENALTY = float(os.environ.get("REPETITION_PENALTY", 1.0))
-
-ANALYSIS_PATTERN = analysis_match = re.compile(r'^(.*)assistantfinal', flags=re.DOTALL)
 
 SAMPLE_POLICY = """
 Spam Policy (#SP) 
@@ -174,13 +184,13 @@ def generate_stream(
         )
         resp.raise_for_status()
     except requests.exceptions.ConnectionError:
-        yield "Error: Could not connect to Ollama. Is it running?", "", ""
+        yield "Error: Could not connect to the configured backend. Check OLLAMA_URL and start the proxy or local server.", "", ""
         return
     except requests.exceptions.HTTPError as e:
         yield f"Error: {e}", "", ""
         return
 
-    analysis = ""
+    analysis = None
     output = ""
     for raw in resp.iter_lines():
         if not raw:
@@ -194,13 +204,11 @@ def generate_stream(
             continue
 
         output += token
-        if not analysis:
-            m = ANALYSIS_PATTERN.match(output)
-            if m:
-                analysis = re.sub(r'^analysis\s*', '', m.group(1))
-                output = ""
+        if analysis is None and "assistantfinal" in output:
+            before, output = output.split("assistantfinal", 1)
+            analysis = re.sub(r'^analysis\s*', '', before)
 
-        if not analysis:
+        if analysis is None:
             analysis_text = re.sub(r'^analysis\s*', '', output)
             final_text = None
         else:
@@ -217,10 +225,10 @@ def generate_stream(
 
 CUSTOM_CSS = "/** Pretty but simple **/\n:root { --radius: 14px; }\n.gradio-container { font-family: ui-sans-serif, system-ui, Inter, Roboto, Arial; }\n#hdr h1 { font-weight: 700; letter-spacing: -0.02em; }\ntextarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }\nfooter { display:none; }\n"
 
-with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Soft()) as demo:
+with gr.Blocks() as demo:
     with gr.Column(elem_id="hdr"):
         gr.Markdown("""
-        # OpenAI gpt-oss-safeguard 20B — Ollama
+        # Safeguard evaluator
         [gpt-oss-safeguard-20b](https://huggingface.co/openai/gpt-oss-safeguard-20b) · [Prompt Guide](https://cookbook.openai.com/articles/gpt-oss-safeguard-guide) · [Chat](https://dr.eamer.dev/io/safeguard/chat) · [Safeguard](https://dr.eamer.dev/io/safeguard/)
 
         Provide a **Policy** and a **Prompt**.
@@ -275,4 +283,6 @@ with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Soft()) as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue(max_size=32).launch(server_name="0.0.0.0")
+    demo.queue(max_size=32).launch(
+        server_name="0.0.0.0", css=CUSTOM_CSS, theme=gr.themes.Soft()
+    )
