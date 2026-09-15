@@ -15,32 +15,12 @@ Built on OpenAI's [`gpt-oss-safeguard-20b`](https://huggingface.co/openai/gpt-os
 
 ![Safeguard showing a PASS verdict for a legitimate support request](screenshots/safeguard-pass.png)
 
-## Cursor Skill Starter Pack
+## Development and future ideas
 
-This repository now includes a project-scoped skill pack at `.cursor/skills/` to make recurring development workflows repeatable.
-
-Use a skill explicitly in Cursor chat with `/skill-name`:
-
-- `/proxy-cors-regression-check`
-- `/streaming-jsonline-debugger`
-- `/safeguard-verdict-split-validator`
-- `/ui-accessibility-smoke-check`
-- `/local-stack-smoke-test`
-- `/release-readiness-safeguard`
-- `/proxy-error-path-audit`
-- `/safeguard-policy-fixture-check`
-
-`PROJECT_PLAN.md` tracks current objectives and outstanding follow-up tasks for this skill-driven workflow.
-
-## App Store Launch Pack (iOS/iPadOS)
-
-A full public launch asset plan is now documented in `APP_STORE_LAUNCH_PACK.md`, including:
-
-- App icon production specs (`1024 x 1024`, PNG, no transparency)
-- iPhone/iPad screenshot requirements and narrative sequencing
-- App preview video technical requirements and storyboard
-- Accessibility and HIG guardrails for launch-ready marketing assets
-- A launch risk and validation section aligned with business/technical/skeptical review lenses
+The [project plan](PROJECT_PLAN.md) tracks verified behavior and remaining work.
+The [mobile concept notes](APP_STORE_LAUNCH_PACK.md) preserve ideas for a possible
+future app. This repository currently contains web and Gradio interfaces; it has
+no native iOS project or submission-ready store assets.
 
 ## What it does
 
@@ -149,7 +129,7 @@ You need a [HuggingFace token](https://huggingface.co/settings/tokens) with infe
 
 ```bash
 # Clone
-git clone https://github.com/lukeslp/ux-oss-safeguard.git
+git clone https://github.com/actually-useful-ai/ux-oss-safeguard.git
 cd ux-oss-safeguard
 
 # Token auto-loads from ~/.cache/huggingface/token (set by huggingface-cli login)
@@ -168,7 +148,8 @@ No `npm install` needed; there are no dependencies.
 
 ### Gradio version
 
-There's also a Gradio interface in `gpt-oss-safeguard/`:
+The Gradio interface in `gpt-oss-safeguard/` uses the same local Node proxy at
+`http://localhost:3456` by default. It uses Gradio 6; start the proxy first, then run:
 
 ```bash
 cd gpt-oss-safeguard
@@ -176,6 +157,10 @@ pip install -r requirements.txt
 python app.py
 # http://localhost:7860
 ```
+
+To use a local Ollama server instead, set `OLLAMA_URL=http://localhost:11434`
+and `OLLAMA_MODEL` to an installed model. Offline transport and streaming tests run
+with `python3 -m unittest discover -s tests -v`; they make no model requests.
 
 ## Example walkthrough
 

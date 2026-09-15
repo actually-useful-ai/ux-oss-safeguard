@@ -1,2 +1,2 @@
-gradio
-requests
+gradio>=6,<7
+requests>=2.32,<3

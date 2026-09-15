@@ -1,15 +1,9 @@
 # App Store Launch Pack: Safeguard
 
-> **Status (2026-05): aspirational.** No iOS project exists in this
-> repo today — the codebase is HTML + a Node proxy + a Gradio variant.
-> This pack describes the public submission Safeguard *would* make
-> once an iOS wrapper exists. A sibling sunset trigger is recorded in
-> `PROJECT_PLAN.md`: if no iOS wrapper is started within 60 days of
-> this file landing on `main`, the launch pack is removed and iOS
-> framing comes out of the public docs.
-
-This document is the production checklist for shipping `Safeguard` publicly on the Apple App Store.
-Scope in this version: **iPhone + iPad**, with **App Icon + Screenshots + App Preview Video**.
+> **Historical mobile concept, retained for reference.** This repository has no
+> native iOS project or submission-ready assets. The specifications and copy below
+> are early planning ideas, not current platform requirements or release evidence.
+> Recheck requirements and validate an actual native build before resuming this work.
 
 ## 1) Launch Scope and Positioning
 
@@ -152,7 +146,7 @@ app-store/
 
 ### Business
 - Audience fit is strong for technical moderation and safety evaluation buyers.
-- Messaging should emphasize speed-to-verdict and policy transparency, not generic AI chat.
+- Messaging should emphasize speed-to-verdict and policy transparency, not generic chat.
 - Monetization path for future versions: hosted team workflow, audit logs, and policy template packs.
 
 ### Technical

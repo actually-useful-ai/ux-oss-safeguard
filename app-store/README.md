@@ -1,8 +1,8 @@
 # App Store Asset Workspace
 
-This directory holds production-ready App Store launch assets and source copy.
+This directory preserves draft copy for a possible mobile app. It does not contain a production-ready icon, screenshot set, preview video or native build.
 
-## Structure
+## Proposed structure
 
 - `icon/`: Final `1024 x 1024` App Store icon export.
 - `screenshots/iphone-6.9/`: iPhone 6.9-inch screenshots.
@@ -26,4 +26,4 @@ Examples:
 
 ## QA Reminder
 
-Before upload, validate all assets against `APP_STORE_LAUNCH_PACK.md`.
+If mobile work resumes, recheck current platform requirements and capture assets from a verified native build. `APP_STORE_LAUNCH_PACK.md` contains historical concept notes.
