@@ -29,6 +29,66 @@ if (!HF_TOKEN) {
     console.warn('WARNING: No HuggingFace token found. Set HF_TOKEN env var or login with `huggingface-cli login`');
 }
 
+// ---------------------------------------------------------------------------
+// Abuse controls for /api/chat (unauthenticated relay to a token-funded HF
+// endpoint). All in-memory, dependency-free.
+// ---------------------------------------------------------------------------
+
+// Per-IP sliding-window rate limit.
+const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const RATE_MAX = 20;                   // requests per window per IP
+const rateBuckets = new Map();         // ip -> array of request timestamps (ms)
+let lastRatePrune = 0;
+
+// Resolve client IP: leftmost X-Forwarded-For (behind Caddy), else socket addr.
+function clientIp(req) {
+    const xff = req.headers['x-forwarded-for'];
+    if (xff) {
+        const first = xff.split(',')[0].trim();
+        if (first) return first;
+    }
+    return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
+// Returns { ok: true } or { ok: false, retryAfter: <seconds> }.
+function checkRateLimit(req) {
+    const now = Date.now();
+
+    // Periodically prune stale IP buckets so the Map can't grow unbounded.
+    if (now - lastRatePrune > RATE_WINDOW_MS) {
+        for (const [ip, hits] of rateBuckets) {
+            const fresh = hits.filter(t => now - t < RATE_WINDOW_MS);
+            if (fresh.length) rateBuckets.set(ip, fresh);
+            else rateBuckets.delete(ip);
+        }
+        lastRatePrune = now;
+    }
+
+    const ip = clientIp(req);
+    const hits = (rateBuckets.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
+
+    if (hits.length >= RATE_MAX) {
+        const retryAfter = Math.max(1, Math.ceil((RATE_WINDOW_MS - (now - hits[0])) / 1000));
+        rateBuckets.set(ip, hits);
+        return { ok: false, retryAfter };
+    }
+
+    hits.push(now);
+    rateBuckets.set(ip, hits);
+    return { ok: true };
+}
+
+// Global concurrency cap on in-flight upstream HF requests. Spoof-proof
+// backstop: a forged X-Forwarded-For dodges the per-IP limiter but still
+// counts against this. Each accepted /api/chat call must call releaseSlot()
+// exactly once (guarded by a per-request flag to prevent double-decrement).
+const MAX_INFLIGHT = 6;
+const INFLIGHT_RETRY_AFTER = 5; // seconds
+let inFlight = 0;
+
+// Upstream timeout for HF requests (ms).
+const HF_TIMEOUT_MS = 120 * 1000;
+
 const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin || '';
     const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://dr.eamer.dev').split(',');
@@ -105,6 +165,39 @@ const server = http.createServer(async (req, res) => {
 
     // Proxy /api/chat → HuggingFace Inference API
     if (pathname === '/api/chat') {
+        // 1) Per-IP rate limit.
+        const rl = checkRateLimit(req);
+        if (!rl.ok) {
+            res.writeHead(429, {
+                'Content-Type': 'application/json',
+                'Retry-After': String(rl.retryAfter),
+            });
+            res.end(JSON.stringify({ error: 'Rate limit exceeded. Please slow down and try again later.' }));
+            return;
+        }
+
+        // 2) Global concurrency cap (spoof-proof backstop).
+        if (inFlight >= MAX_INFLIGHT) {
+            res.writeHead(503, {
+                'Content-Type': 'application/json',
+                'Retry-After': String(INFLIGHT_RETRY_AFTER),
+            });
+            res.end(JSON.stringify({ error: 'Service busy. Please try again in a moment.' }));
+            return;
+        }
+
+        // Reserve a slot. releaseSlot() is idempotent so it can be wired to
+        // multiple lifecycle events without double-decrementing.
+        inFlight++;
+        let slotReleased = false;
+        const releaseSlot = () => {
+            if (slotReleased) return;
+            slotReleased = true;
+            inFlight--;
+        };
+        res.on('close', releaseSlot);
+        res.on('finish', releaseSlot);
+
         try {
             const body = await collectBody(req);
             const ollamaReq = JSON.parse(body);
@@ -120,7 +213,7 @@ const server = http.createServer(async (req, res) => {
             });
 
             if (ollamaReq.stream) {
-                await streamHF(hfPayload, res);
+                await streamHF(hfPayload, res, req);
             } else {
                 await nonStreamHF(hfPayload, res);
             }
@@ -130,6 +223,8 @@ const server = http.createServer(async (req, res) => {
                 res.writeHead(502, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: err.message }));
             }
+        } finally {
+            releaseSlot();
         }
         return;
     }
@@ -179,7 +274,7 @@ async function nonStreamHF(payload, res) {
 }
 
 // Streaming: call HF with SSE, translate each chunk to Ollama newline-delimited JSON
-async function streamHF(payload, res) {
+async function streamHF(payload, res, req) {
     return new Promise((resolve, reject) => {
         const url = new URL(HF_BASE + '/chat/completions');
 
@@ -194,6 +289,24 @@ async function streamHF(payload, res) {
             },
         };
 
+        let settled = false;
+        const finish = (err) => {
+            if (settled) return;
+            settled = true;
+            if (err) reject(err); else resolve();
+        };
+
+        // If the client navigates away mid-stream, tear down the upstream
+        // request so we stop pulling tokens (and burning quota) into a dead
+        // socket. Without this the hfReq keeps streaming after the client is
+        // gone. Bound to req and res 'close' to cover both directions.
+        const onClientClose = () => {
+            hfReq.destroy();
+            finish();
+        };
+        res.on('close', onClientClose);
+        if (req) req.on('close', onClientClose);
+
         const hfReq = https.request(options, (hfRes) => {
             if (hfRes.statusCode !== 200) {
                 let body = '';
@@ -202,7 +315,7 @@ async function streamHF(payload, res) {
                     console.error(`HF API ${hfRes.statusCode}:`, body.slice(0, 500));
                     res.writeHead(hfRes.statusCode >= 500 ? 502 : hfRes.statusCode, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Classification service unavailable. Please try again.' }));
-                    resolve();
+                    finish();
                 });
                 return;
             }
@@ -248,16 +361,30 @@ async function streamHF(payload, res) {
 
             hfRes.on('end', () => {
                 res.end();
-                resolve();
+                finish();
             });
 
             hfRes.on('error', (err) => {
                 res.end();
-                reject(err);
+                finish(err);
             });
         });
 
-        hfReq.on('error', reject);
+        // Bound upstream timeout so a stalled HF connection can't pin an
+        // in-flight slot forever.
+        hfReq.setTimeout(HF_TIMEOUT_MS, () => {
+            hfReq.destroy(new Error('Upstream HF request timed out'));
+        });
+
+        hfReq.on('error', (err) => {
+            if (!res.headersSent) {
+                res.writeHead(502, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Classification service unavailable. Please try again.' }));
+            } else {
+                res.end();
+            }
+            finish(err);
+        });
         hfReq.write(payload);
         hfReq.end();
     });
@@ -284,6 +411,9 @@ function fetchHF(endpoint, payload) {
             res.on('error', reject);
         });
 
+        req.setTimeout(HF_TIMEOUT_MS, () => {
+            req.destroy(new Error('Upstream HF request timed out'));
+        });
         req.on('error', reject);
         req.write(payload);
         req.end();
